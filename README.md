@@ -14,6 +14,7 @@ Then it keeps track of the referral hunt itself: the roles I'm pursuing, the peo
 - **An inbox ordered by freshness.** Roles are grouped by the day they were posted, new ones are highlighted, and a digest at the top shows which companies posted today. You can filter by keyword, location, company and remote / hybrid / on-site, and move through roles with j and k.
 - **A tracker for the referral hunt.** Track a role and record each message you send; the app reminds you to follow up after 5 days of silence and moves the role along as people reply and refer you (Saved → Reaching out → Referred → Applied → Interviewing → Offer). A People page keeps everyone you've talked to and where each conversation stands.
 - **Roles from anywhere.** Paste a link from LinkedIn or any careers site to add a role the app can't sync. If the link is on a board it can read, it offers to track the whole company.
+- **Job-alert emails, silently.** For sites that can't be read (Microsoft, Meta, Apple) and LinkedIn-only roles, the app reads job-alert emails from a Gmail label each morning, read-only, and adds their roles to the inbox. A Gmail filter keeps the alerts out of your inbox, so they never buzz. [Setup guide](docs/gmail-setup.md).
 
 On a real run it kept about 1,460 relevant US roles from eight companies, including 654 software roles from Amazon, 305 from Google, 138 from Nvidia and 161 from Bloomberg.
 
@@ -30,7 +31,6 @@ On a real run it kept about 1,460 relevant US roles from eight companies, includ
 
 | Phase | Scope |
 |---|---|
-| 3 | Job-alert emails for sites that can't be read (Microsoft, Meta, Apple, LinkedIn-only roles), filed silently in Gmail and imported daily |
 | 4 | AI ranking of the shortlist against my resume, and drafted referral messages I review and send |
 | 5 | Browser extension: save the profile I'm viewing; fill application forms (I always press submit) |
 | 6 | Tailored resumes and cover letters, a reusable answer bank, reply-rate stats |
@@ -44,9 +44,9 @@ flowchart LR
     api -->|daily, read-only, paced| feeds[Greenhouse, Lever, Ashby APIs<br/>Workday, Avature, amazon.jobs,<br/>Google Careers, Goldman Sachs]
 ```
 
-- **Backend:** Java 21, Spring Boot 3.5, Spring Data JPA, Flyway, `RestClient`, jsoup. Organised by feature (`company`, `job`, `job.source`, `contact`, `tracker`). Each site is one class behind a `JobSource` interface.
+- **Backend:** Java 21, Spring Boot 3.5, Spring Data JPA, Flyway, `RestClient`, jsoup, the Gmail API with Google OAuth. Organised by feature (`company`, `job`, `job.source`, `contact`, `tracker`, `alerts`). Each site is one class behind a `JobSource` interface.
 - **Frontend:** React 19, Vite, Tailwind CSS 4, TanStack Query, lucide icons. Filters and the open role live in the URL, so any view can be bookmarked. Light and dark themes.
-- **Tests:** 197 in total. Every source is tested against a trimmed copy of a real response; the sync and the REST API run against real Postgres via Testcontainers; UI components are tested with Vitest and Testing Library. CI runs everything on every push.
+- **Tests:** 227 in total. Every site source is tested against a trimmed copy of a real response, and the alert parsers against sample emails; the sync and the REST API run against real Postgres via Testcontainers; UI components are tested with Vitest and Testing Library. CI runs everything on every push.
 
 The full design, with diagrams of the sync, the data model, the deployment path and the roadmap, is in [docs/architecture.md](docs/architecture.md). The decisions with real trade-offs are in [docs/adr](docs/adr).
 
@@ -91,6 +91,8 @@ cd frontend && npm test && npm run lint
 | `SYNC_CRON` | `0 0 7 * * *` | When the daily sync runs (server time zone, `TZ`) |
 | `SYNC_ENABLED` | `true` | Turn the daily sync off |
 | `FOLLOW_UP_AFTER` | `5d` | When to remind you to follow up on a message with no reply |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | none | A Google OAuth client for reading job-alert emails ([setup](docs/gmail-setup.md)); put them in `.env` |
+| `GMAIL_LABEL` | `Job alerts` | The Gmail label alert emails are filed under |
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | local Postgres | Database |
 
 ### API
@@ -111,5 +113,8 @@ cd frontend && npm test && npm run lint
 | `GET` | `/api/jobs/{id}/tracking`, `/api/contacts/{id}/outreach` | Conversations about a role, or with a person |
 | `POST` | `/api/outreach`, `/api/outreach/{id}/events` | Record a message you sent; record a follow-up, reply, referral or note |
 | `GET` | `/api/outreach/due` | Follow-ups due today |
+| `GET` `DELETE` | `/api/gmail` | Gmail connection and last import; disconnect (revokes access) |
+| `GET` | `/api/gmail/connect`, `/api/gmail/callback` | Google sign-in, read-only |
+| `POST` | `/api/gmail/import` | Read new job-alert emails now (202) |
 
 Errors are RFC 7807 problem details.

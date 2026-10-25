@@ -68,7 +68,7 @@ The API is the only thing that talks to the outside world, and it only reads fro
 | Postgres 16 | Docker Compose | All state |
 | Browser extension | Chrome MV3, unpacked | Save a viewed profile; fill application forms (phase 4) |
 
-The backend is organised **by feature** rather than by layer (`company`, `job`, `job.source`, `contact`, `tracker`), so each feature's entity, repository, service and controller sit together. See [ADR 0002](adr/0002-package-by-feature.md).
+The backend is organised **by feature** rather than by layer (`company`, `job`, `job.source`, `contact`, `tracker`, `alerts`), so each feature's entity, repository, service and controller sit together. See [ADR 0002](adr/0002-package-by-feature.md).
 
 ## 5. Job ingestion
 
@@ -315,14 +315,37 @@ stateDiagram-v2
 
 **Roles from anywhere.** A role can be added by pasting its link (from LinkedIn, or a company whose site can't be read). It is saved under a company with that name, or a new company marked `MANUAL` that is never synced. Hand-added roles have `manual = true`: syncs leave them alone and the owner closes them. If the link turns out to be on a board the app can read, the app offers to track the whole company. The same link pasted twice returns the saved role.
 
-## 8. Job-alert email import (phase 3)
+## 8. Job-alert email import
 
-For companies whose careers sites can't be read (Microsoft, Apple, Meta), and for LinkedIn-only listings, the owner subscribes to job alerts on the company's site or on LinkedIn, and the app reads those emails from the owner's own Gmail.
+For companies whose careers sites can't be read (Microsoft, Apple, Meta), and for LinkedIn-only listings, the owner subscribes to job alerts and the app reads those emails from the owner's own Gmail. Setup is in [gmail-setup.md](gmail-setup.md).
 
-- **No noise.** A Gmail filter files alert emails under a `Job alerts` label, skips the inbox and marks them read, so they never trigger a notification. The app can create this filter when Gmail access is granted.
-- **Least access.** The Gmail API with the read-only scope, reading only that label, once a day with the sync. Free.
-- **One parser per sender** (LinkedIn, Microsoft careers, and so on), behind the same idea as `JobSource`: each maps an email into `FetchedJob` records, with the link to the posting. Alerts carry little detail, so the detail pane links out.
-- **Same rules.** US only, maximum age and search phrases apply as for any source; a role seen in two alerts is stored once.
+```mermaid
+sequenceDiagram
+    participant O as Owner
+    participant A as App
+    participant G as Google
+    O->>A: Connect Gmail
+    A-->>O: redirect to Google (scope gmail.readonly, state)
+    O->>G: approve read-only access
+    G-->>A: /api/gmail/callback?code&state
+    A->>G: code → refresh + access tokens
+    A->>A: save the account (one row)
+    Note over A: Daily, after the company syncs
+    A->>G: refresh → access token
+    A->>G: list messages under the label, last 30 days
+    A->>G: fetch each message not read before
+    A->>A: parse → roles → rules → save; remember the message id
+```
+
+- **No noise.** A Gmail filter files alert emails under a `Job alerts` label, skips the inbox and marks them read, so they never trigger a notification.
+- **Least access.** Google sign-in with only the `gmail.readonly` scope; the app reads only that label. The sign-in carries a random `state` that must come back unchanged (CSRF protection), and works once. Disconnecting revokes the token at Google.
+- **Each email once.** `imported_email` remembers every message id read, so a later run doesn't even fetch their bodies.
+- **One parser per kind of email** (`AlertParser`), chosen by sender: LinkedIn's alert cards (title link plus a "Company · Location" line), and a fallback for companies' own careers alerts that picks out links shaped like a single job posting and names the company from the sender. Links lose their tracking parameters, so the same role from two emails matches. Parsers are pure functions, tested against sample emails.
+- **Same rules.** Roles outside the US are skipped; roles already saved aren't added twice. Alert roles are saved as hand-added roles (`manual`), with the email's date as the listing date.
+- **Gaps are visible.** Emails in which no parser finds a role are counted and shown on the Companies page, so a new alert format doesn't fail silently.
+- **Part of the sync.** The importer is an `ExtraFeed`, an interface in the job package that the sync runner calls after the companies; the job feature doesn't depend on the email code. "Import now" runs it alone through the same background runner.
+
+The sample emails in the tests are modelled on the known layout of these alerts. Real alerts, trimmed of personal details, should replace them as they arrive.
 
 ## 9. AI (phase 4)
 
@@ -362,7 +385,7 @@ Today the app runs on one machine. It is built so that hosting it later is a con
 **To do before hosting it**
 1. **Authentication.** Spring Security with one sign-in method (a passkey or an OAuth provider), and the API bound to all interfaces only behind TLS.
 2. **Sync state in the database.** The run state and the one-run-at-a-time lock are in memory, which is right for one instance. More than one instance needs a database lock (ShedLock) and a sync-run table.
-3. **Secrets and personal data.** The database password and any AI key from a secret store; the resume in encrypted storage rather than `private/`.
+3. **Secrets and personal data.** The database password, the Google client secret and any AI key from a secret store; the Gmail refresh token encrypted at rest (it is read-only, but still access to the owner's mail); the resume in encrypted storage rather than `private/`.
 4. **Multi-user, if ever.** A `user_id` on companies and everything below them. Nothing in the domain model assumes a single user beyond the missing column.
 
 ## 13. Roadmap
@@ -372,7 +395,7 @@ Today the app runs on one machine. It is built so that hosting it later is a con
 | 1 | Companies, link detection, Greenhouse/Lever/Ashby sync, jobs inbox with filters and "new" flag | Done |
 | 1.5 | Workday, Avature, Amazon, Google and Goldman Sachs sources; US-only and age rules; search phrases; background sync with progress; redesigned UI | Done |
 | 2 | Tracker: roles by stage, people, conversations with follow-up reminders, paste-a-job-link | Done |
-| 3 | Job-alert email import from a silent Gmail label (Microsoft, Meta, Apple, LinkedIn-only roles) | Planned |
+| 3 | Job-alert email import from a silent Gmail label (Microsoft, Meta, Apple, LinkedIn-only roles) | Done; parsers to be tuned on real alerts |
 | 4 | AI match scoring and message drafting | Planned |
 | 5 | Browser extension: save profile, fill applications | Planned |
 | 6 | Tailored resumes and cover letters, answer bank, reply-rate stats | Planned |
