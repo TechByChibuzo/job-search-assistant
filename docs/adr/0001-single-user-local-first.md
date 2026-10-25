@@ -15,4 +15,4 @@ Run everything on the owner's machine with Docker Compose: Postgres, the API and
 - No hosting bill, and personal data never leaves the machine (except to an AI provider, if a hosted one is chosen; see ADR 0003).
 - No auth code to write or secure in the early phases.
 - The daily sync only runs while the machine is on. That is acceptable: a missed run is caught by the next one or by "Sync now", and job freshness is measured in days.
-- Hosting it later means adding authentication first. The API is stateless, so that is a contained change.
+- Hosting it later means adding authentication first. ADR 0005 keeps everything else ready for that, so it is a contained change.
