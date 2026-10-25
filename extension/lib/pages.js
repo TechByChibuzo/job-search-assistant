@@ -7,11 +7,28 @@ export function classify(url) {
   return 'application'
 }
 
-/** Hiring systems the filler knows well; others are tried by label, best effort. */
+/** Hiring systems the filler knows well, by the site's own name; others are tried by label, best effort. */
+const SYSTEMS = [
+  ['Greenhouse', 'greenhouse.io'],
+  ['Lever', 'lever.co'],
+  ['Ashby', 'ashbyhq.com'],
+  ['Workday', 'myworkdayjobs.com'],
+  ['Workday', 'myworkdaysite.com'],
+]
+
+/**
+ * Matched on the parsed host, exactly or as a subdomain, over https: "evil.example/greenhouse.io" or
+ * "greenhouse.io.evil.example" isn't Greenhouse, and the resume is attached automatically only on real ones.
+ */
 export function knownSystem(url) {
-  if (/greenhouse\.io/i.test(url)) return 'Greenhouse'
-  if (/lever\.co/i.test(url)) return 'Lever'
-  if (/ashbyhq\.com/i.test(url)) return 'Ashby'
-  if (/myworkdayjobs\.com|myworkdaysite\.com/i.test(url)) return 'Workday'
-  return null
+  let parsed
+  try {
+    parsed = new URL(url)
+  } catch {
+    return null
+  }
+  if (parsed.protocol !== 'https:') return null
+  const host = parsed.hostname.toLowerCase()
+  const match = SYSTEMS.find(([, domain]) => host === domain || host.endsWith(`.${domain}`))
+  return match ? match[0] : null
 }
