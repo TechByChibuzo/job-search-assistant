@@ -11,6 +11,9 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Component;
 
 import com.jobsearch.config.AppProperties;
@@ -27,6 +30,8 @@ public class ResumeStore {
 
     private final Path dir;
     private volatile Resume cached;
+    private volatile String cachedText;
+    private volatile Resume textOf;
 
     ResumeStore(AppProperties properties) {
         this.dir = Path.of(properties.ai().resumeDir());
@@ -55,6 +60,27 @@ public class ResumeStore {
             return Optional.of(resume);
         } catch (IOException e) {
             throw new UncheckedIOException("Couldn't read the resume " + file.getFileName(), e);
+        }
+    }
+
+    /**
+     * The resume's plain text, to check what Claude writes against it. Empty when the PDF has no text layer
+     * (a scan), in which case checks can't be made and the interface says so.
+     */
+    public String text(Resume resume) {
+        if (!resume.isPdf()) {
+            return resume.text();
+        }
+        if (resume == textOf && cachedText != null) {
+            return cachedText;
+        }
+        try (PDDocument pdf = Loader.loadPDF(resume.pdf())) {
+            String text = new PDFTextStripper().getText(pdf);
+            cachedText = text;
+            textOf = resume;
+            return text;
+        } catch (IOException e) {
+            return "";
         }
     }
 

@@ -51,6 +51,9 @@ public class Outreach {
 
     private String message;
 
+    /** The first message was drafted by Claude (then edited by the owner), for reply-rate insights. */
+    private boolean drafted;
+
     private Instant firstSentAt;
 
     private Instant lastContactedAt;
@@ -69,7 +72,13 @@ public class Outreach {
     /** The owner sent a first message on {@code sentOn}; a reminder is due {@code followUpDays} later. */
     static Outreach sent(Contact contact, Job job, OutreachChannel channel, String message, Instant sentAt,
             LocalDate sentOn, int followUpDays) {
+        return sent(contact, job, channel, message, false, sentAt, sentOn, followUpDays);
+    }
+
+    static Outreach sent(Contact contact, Job job, OutreachChannel channel, String message, boolean drafted, Instant sentAt,
+            LocalDate sentOn, int followUpDays) {
         Outreach o = new Outreach();
+        o.drafted = drafted;
         o.contact = contact;
         o.job = job;
         o.channel = channel;
@@ -134,6 +143,10 @@ public class Outreach {
 
     public OutreachStatus getStatus() {
         return status;
+    }
+
+    public boolean isDrafted() {
+        return drafted;
     }
 
     public String getMessage() {

@@ -120,6 +120,13 @@ public class TrackerService {
     /** The owner sent someone a message. Tracks the role if it isn't yet, and moves it to "reaching out". */
     @Transactional
     public OutreachView log(long contactId, Long jobId, OutreachChannel channel, String message, LocalDate sentOn) {
+        return log(contactId, jobId, channel, message, sentOn, false);
+    }
+
+    /** @param drafted the message was drafted by Claude, for reply-rate insights */
+    @Transactional
+    public OutreachView log(long contactId, Long jobId, OutreachChannel channel, String message, LocalDate sentOn,
+            boolean drafted) {
         Contact contact = contacts.get(contactId);
         Job job = jobId == null ? null : jobs.get(jobId);
         if (job != null && !Objects.equals(job.getCompany().getId(), contact.getCompany().getId())) {
@@ -134,7 +141,7 @@ public class TrackerService {
         Instant now = clock.instant();
         Instant sentAt = day.equals(today) ? now : day.atTime(12, 0).atZone(zone()).toInstant();
         Outreach o = outreach.save(Outreach.sent(contact, job, channel == null ? OutreachChannel.LINKEDIN : channel,
-                blankToNull(message), sentAt, day, followUpDays));
+                blankToNull(message), drafted, sentAt, day, followUpDays));
         if (job != null) {
             pursuitFor(job, now).advanceTo(PursuitStage.REACHING_OUT, now);
         }

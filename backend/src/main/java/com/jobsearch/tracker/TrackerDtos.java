@@ -99,7 +99,8 @@ final class TrackerDtos {
             Long jobId,
             OutreachChannel channel,
             @Size(max = 10000) String message,
-            LocalDate sentOn) {}
+            LocalDate sentOn,
+            boolean drafted) {}
 
     /** The extension, after the owner submitted an application on {@code url}. */
     record ApplicationRequest(

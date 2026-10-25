@@ -27,9 +27,17 @@ import com.jobsearch.tracker.TrackerDtos.UpdatePursuitRequest;
 class TrackerController {
 
     private final TrackerService tracker;
+    private final InsightsService insights;
 
-    TrackerController(TrackerService tracker) {
+    TrackerController(TrackerService tracker, InsightsService insights) {
         this.tracker = tracker;
+        this.insights = insights;
+    }
+
+    /** Reply and referral rates, and how they vary. */
+    @GetMapping("/api/insights")
+    InsightsService.Insights insights() {
+        return insights.insights();
     }
 
     /** Every tracked role, most recently active first, for the board. */
@@ -75,7 +83,7 @@ class TrackerController {
     @PostMapping("/api/outreach")
     @ResponseStatus(HttpStatus.CREATED)
     OutreachView log(@Valid @RequestBody LogOutreachRequest r) {
-        return tracker.log(r.contactId(), r.jobId(), r.channel(), r.message(), r.sentOn());
+        return tracker.log(r.contactId(), r.jobId(), r.channel(), r.message(), r.sentOn(), r.drafted());
     }
 
     @PostMapping("/api/applications")
