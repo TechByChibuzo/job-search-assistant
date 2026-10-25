@@ -52,7 +52,9 @@ public class CompanyService {
         if (companies.existsByAtsAndBoard(board.ats(), board.board())) {
             throw new ConflictException("Already tracking the " + board.ats() + " board '" + board.board() + "'");
         }
-        String name = notBlank(request.name()) ? request.name().strip() : nameFromBoard(board.board());
+        String name = notBlank(request.name()) ? request.name().strip()
+                : board.ats().company() != null ? board.ats().company()
+                : nameFromBoard(board.board());
         Company company = new Company(name, board, blankToNull(request.careersUrl()));
         company.setSearch(request.search());
         return companies.save(company);

@@ -1,0 +1,66 @@
+{
+  "data": {
+    "roleSearch": {
+      "totalCount": 69,
+      "items": [
+        {
+          "roleId": "180981_GS_MID_CAREER",
+          "jobTitle": "Frontline Production Engineer, Global Banking & Markets, Vice President",
+          "division": "Global Banking & Markets",
+          "jobFunction": "Divisional Leadership",
+          "createdDate": "2026-10-24T21:19:37.000556495Z",
+          "descriptionHtml": "<p><strong><u>What We Do</u></strong></p>\n<p>At Goldman Sachs, our Engineers don&#39;t just make things - we make things possible.\u00a0 Change the world by connecting people and capital with ideas.\u00a0 Solve the most challenging and pressing engineering problems for our clients.\u00a0 Join our engineering teams that build massively scalable software and systems, architect low latency infrastructure solutions,",
+          "locations": [
+            {
+              "primary": true,
+              "state": "NY",
+              "country": "United States",
+              "city": "New York"
+            }
+          ],
+          "externalSource": {
+            "sourceId": "180981"
+          }
+        },
+        {
+          "roleId": "177645_GS_MID_CAREER",
+          "jobTitle": "Software Engineer, Global Banking & Markets, Front Office Technology",
+          "division": "Global Banking & Markets",
+          "jobFunction": "",
+          "createdDate": "2026-10-24T20:34:55.775390530Z",
+          "descriptionHtml": "<p><strong><u>What We Do</u></strong></p>\n<p>At Goldman Sachs, our Engineers don&#39;t just make things \u2013 we make things possible.\u00a0Change the world by connecting people and capital with ideas.\u00a0Solve the most challenging and pressing engineering problems for our clients. Join our engineering teams that build massively scalable software and systems, architect low latency infrastructure solutions, pr",
+          "locations": [
+            {
+              "primary": true,
+              "state": "NY",
+              "country": "United States",
+              "city": "New York"
+            }
+          ],
+          "externalSource": {
+            "sourceId": "177645"
+          }
+        },
+        {
+          "roleId": "152248_GS_MID_CAREER",
+          "jobTitle": "AWS Solutions Architect, Global Banking & Markets, Cloud Platform",
+          "division": "Global Banking & Markets",
+          "jobFunction": "Software Engineering",
+          "createdDate": "2026-10-24T15:06:25.283913266Z",
+          "descriptionHtml": "<p><strong><u>Who We Are</u>\u00a0</strong></p>\n<p>At Goldman Sachs, our Engineers don&#39;t just make things - we make things possible.\u00a0 Change the world by connecting people and capital with ideas.\u00a0 Solve the most challenging and pressing engineering problems for our clients.\u00a0 Join our engineering teams that build massively scalable software and systems, architect low latency infrastructure solutions",
+          "locations": [
+            {
+              "primary": true,
+              "state": "TX",
+              "country": "United States",
+              "city": "Dallas"
+            }
+          ],
+          "externalSource": {
+            "sourceId": "152248"
+          }
+        }
+      ]
+    }
+  }
+}

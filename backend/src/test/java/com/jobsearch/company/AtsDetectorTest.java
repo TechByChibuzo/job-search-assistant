@@ -42,6 +42,8 @@ class AtsDetectorTest {
         "amazon.jobs, AMAZON, amazon",
         "https://www.google.com/about/careers/applications/jobs/results, GOOGLE, google",
         "https://careers.google.com/jobs/results/, GOOGLE, google",
+        "https://higher.gs.com/results?search=engineer, GOLDMAN, goldman",
+        "https://www.goldmansachs.com/careers/, GOLDMAN, goldman",
     })
     void recognisesBoardLinks(String url, AtsType ats, String board) {
         assertThat(detector.detect(url)).contains(new DetectedBoard(ats, board));

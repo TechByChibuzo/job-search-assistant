@@ -126,6 +126,16 @@ class ApiIT {
     }
 
     @Test
+    void namesSingleCompanySourcesAfterTheirCompany() throws Exception {
+        mvc.perform(post("/api/companies").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"careersUrl\": \"https://higher.gs.com/results\", \"search\": \"software engineer\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("Goldman Sachs"))
+                .andExpect(jsonPath("$.ats").value("GOLDMAN"))
+                .andExpect(jsonPath("$.searchBased").value(true));
+    }
+
+    @Test
     void acceptsAWorkdayBoardByHandKeepingTheSiteCase() throws Exception {
         mvc.perform(post("/api/companies").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"ats\": \"WORKDAY\", \"board\": \"nvidia.wd5/NVIDIAExternalCareerSite\"}"))

@@ -29,6 +29,7 @@ export const SOURCES = {
   },
   AMAZON: { label: 'amazon.jobs', url: () => 'https://www.amazon.jobs/en/' },
   GOOGLE: { label: 'Google Careers', url: () => 'https://www.google.com/about/careers/applications/jobs/results' },
+  GOLDMAN: { label: 'Goldman Sachs careers', url: () => 'https://higher.gs.com/results' },
 }
 
 export function sourceLabel(ats) {
@@ -41,7 +42,7 @@ export function boardUrl(ats, board) {
 
 /** The board as people would recognise it: the site name for Workday and Avature, nothing for single-company sources. */
 export function boardLabel(ats, board) {
-  if (ats === 'AMAZON' || ats === 'GOOGLE') return null
+  if (ats === 'AMAZON' || ats === 'GOOGLE' || ats === 'GOLDMAN') return null
   if (ats === 'WORKDAY' || ats === 'AVATURE') return board.split('/')[1]
   return board
 }

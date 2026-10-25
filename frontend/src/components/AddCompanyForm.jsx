@@ -35,7 +35,7 @@ export default function AddCompanyForm() {
 
   let hint = (
     <span className="text-faint">
-      Greenhouse, Lever, Ashby, Workday and Avature boards, amazon.jobs and Google Careers.
+      Greenhouse, Lever, Ashby, Workday and Avature boards, amazon.jobs, Google Careers and Goldman Sachs.
     </span>
   )
   if (detected) {

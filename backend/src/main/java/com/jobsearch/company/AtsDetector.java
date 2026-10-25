@@ -60,6 +60,10 @@ public class AtsDetector {
             case "api.ashbyhq.com" -> segmentAfter(path, "job-board").flatMap(b -> normalize(AtsType.ASHBY, b));
             case "amazon.jobs" -> Optional.of(new DetectedBoard(AtsType.AMAZON, "amazon"));
             case "careers.google.com" -> Optional.of(new DetectedBoard(AtsType.GOOGLE, "google"));
+            case "higher.gs.com" -> Optional.of(new DetectedBoard(AtsType.GOLDMAN, "goldman"));
+            case "goldmansachs.com" -> !path.isEmpty() && path.getFirst().equals("careers")
+                    ? Optional.of(new DetectedBoard(AtsType.GOLDMAN, "goldman"))
+                    : Optional.empty();
             case "google.com" -> path.size() >= 2 && path.get(0).equals("about") && path.get(1).equals("careers")
                     ? Optional.of(new DetectedBoard(AtsType.GOOGLE, "google"))
                     : Optional.empty();
@@ -84,6 +88,7 @@ public class AtsDetector {
             case AVATURE -> matchKeepingSite(ats, AVATURE_BOARD, b);
             case AMAZON -> Optional.of(new DetectedBoard(ats, "amazon"));
             case GOOGLE -> Optional.of(new DetectedBoard(ats, "google"));
+            case GOLDMAN -> Optional.of(new DetectedBoard(ats, "goldman"));
         };
     }
 
