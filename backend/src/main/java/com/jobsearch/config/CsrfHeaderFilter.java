@@ -26,9 +26,13 @@ public class CsrfHeaderFilter extends OncePerRequestFilter {
     public static final String VALUE = "job-search-assistant";
     private static final Set<String> SAFE = Set.of("GET", "HEAD", "OPTIONS");
 
+    /**
+     * Every request that changes something is checked, whatever its path. Matching on the raw path would
+     * let "//api/sync" or "/api;x/sync" through, which the router still sends to the same endpoint.
+     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !request.getRequestURI().startsWith("/api/") || SAFE.contains(request.getMethod());
+        return SAFE.contains(request.getMethod());
     }
 
     @Override

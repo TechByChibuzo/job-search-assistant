@@ -49,6 +49,13 @@ class CsrfHeaderIT {
     }
 
     @Test
+    void checksEveryChangeWhateverTheShapeOfThePath() throws Exception {
+        for (String path : new String[] {"//api/sync", "/api;x/sync", "/API/sync", "/actuator/health"}) {
+            mvc.perform(post(path)).andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
     void allowsTheAppAndPlainReads() throws Exception {
         mvc.perform(post("/api/sync").header(CsrfHeaderFilter.HEADER, CsrfHeaderFilter.VALUE)).andExpect(status().isAccepted());
         mvc.perform(get("/api/companies")).andExpect(status().isOk());
