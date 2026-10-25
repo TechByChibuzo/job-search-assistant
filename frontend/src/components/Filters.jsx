@@ -1,21 +1,33 @@
 import { useEffect, useState } from 'react'
+import { Search, MapPin, Sparkles } from 'lucide-react'
 import { useCompanies } from '../api/hooks'
 import { WORKPLACES } from '../lib/labels'
 import { useDebounced } from '../lib/useDebounced'
 
-const input =
-  'rounded-md border border-rule bg-surface px-3 py-2 text-sm placeholder:text-slate/80 focus:border-ink focus:outline-none'
+const field =
+  'h-10 rounded-lg border border-rule bg-surface text-sm text-ink placeholder:text-faint shadow-[0_1px_0_rgb(0_0_0/0.02)] focus:border-accent focus:outline-none'
 
 /** Text inputs update the filters after a short pause, so typing doesn't fire a request per key. */
-function DebouncedInput({ value, onChange, ...props }) {
+function DebouncedInput({ value, onChange, icon: Icon, className = '', ...props }) {
   const [draft, setDraft] = useState(value)
+  const [lastValue, setLastValue] = useState(value)
+  // Clearing the filters from outside empties the box
+  if (value !== lastValue) {
+    setLastValue(value)
+    if (value === '') setDraft('')
+  }
   const debounced = useDebounced(draft)
   useEffect(() => {
     if (debounced !== value) onChange(debounced)
     // Only the settled draft should trigger a change
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced])
-  return <input {...props} value={draft} onChange={(e) => setDraft(e.target.value)} />
+  return (
+    <div className={`relative ${className}`}>
+      <Icon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" aria-hidden />
+      <input {...props} value={draft} onChange={(e) => setDraft(e.target.value)} className={`${field} w-full pr-3 pl-9`} />
+    </div>
+  )
 }
 
 export default function Filters({ filters, onChange }) {
@@ -30,24 +42,26 @@ export default function Filters({ filters, onChange }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <DebouncedInput
+        icon={Search}
         type="search"
         aria-label="Search titles and teams"
         placeholder="Search titles and teams"
-        className={`${input} w-full sm:w-64`}
+        className="w-full sm:w-72"
         value={filters.q}
         onChange={(q) => set({ q })}
       />
       <DebouncedInput
+        icon={MapPin}
         type="search"
         aria-label="Location"
-        placeholder="Location"
-        className={`${input} w-[calc(50%-0.25rem)] sm:w-40`}
+        placeholder="City or state"
+        className="w-[calc(50%-0.25rem)] sm:w-44"
         value={filters.location}
         onChange={(location) => set({ location })}
       />
       <select
         aria-label="Company"
-        className={`${input} w-[calc(50%-0.25rem)] sm:w-44`}
+        className={`${field} w-[calc(50%-0.25rem)] px-3 sm:w-48`}
         value={filters.companyId ?? ''}
         onChange={(e) => set({ companyId: e.target.value || null })}
       >
@@ -58,7 +72,7 @@ export default function Filters({ filters, onChange }) {
           </option>
         ))}
       </select>
-      <div className="flex gap-1" role="group" aria-label="Workplace">
+      <div className="flex h-10 rounded-lg border border-rule bg-surface p-1" role="group" aria-label="Workplace">
         {WORKPLACES.map((w) => {
           const on = filters.workplace.includes(w.value)
           return (
@@ -67,8 +81,8 @@ export default function Filters({ filters, onChange }) {
               type="button"
               aria-pressed={on}
               onClick={() => toggleWorkplace(w.value)}
-              className={`rounded-md border px-2.5 py-2 text-sm ${
-                on ? 'border-ink bg-ink text-paper' : 'border-rule bg-surface text-slate hover:text-ink'
+              className={`rounded-md px-3 text-sm font-medium transition-colors ${
+                on ? 'bg-ink text-paper' : 'text-slate hover:text-ink'
               }`}
             >
               {w.label}
@@ -76,15 +90,17 @@ export default function Filters({ filters, onChange }) {
           )
         })}
       </div>
-      <label className="flex cursor-pointer items-center gap-2 px-1 text-sm">
-        <input
-          type="checkbox"
-          className="size-4 accent-[var(--ink)]"
-          checked={filters.newOnly}
-          onChange={(e) => set({ newOnly: e.target.checked })}
-        />
-        <span className="highlight">New only</span>
-      </label>
+      <button
+        type="button"
+        aria-pressed={filters.newOnly}
+        onClick={() => set({ newOnly: !filters.newOnly })}
+        className={`inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors ${
+          filters.newOnly ? 'border-ink bg-ink text-paper' : 'border-rule bg-surface text-slate hover:text-ink'
+        }`}
+      >
+        <Sparkles className="size-4" aria-hidden />
+        New only
+      </button>
     </div>
   )
 }

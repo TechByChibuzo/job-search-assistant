@@ -1,64 +1,111 @@
 @import 'tailwindcss';
 
-/* Tokens. Light is the default; dark follows the OS unless data-theme pins one. */
+/*
+ * Tokens. Light is the default; dark follows the OS unless the theme switch pins one with data-theme.
+ * The sidebar is always deep ink; new roles are marked with a highlighter pass, the one loud element.
+ */
 :root {
-  --paper: #f6f7f9;
+  --paper: #f5f6f8;
   --surface: #ffffff;
-  --ink: #1c2340;
-  --slate: #5c6479;
-  --rule: #dfe3eb;
+  --sunken: #eef0f4;
+  --ink: #1b2240;
+  --slate: #5a6378;
+  --faint: #8a92a6;
+  --rule: #e1e4eb;
+  --rail: #161c35;
+  --rail-ink: #e7e9f1;
+  --rail-dim: #9aa1b7;
+  --rail-rule: #262d4b;
   --highlight: #ffe36e;
-  --highlight-ink: #1c2340;
+  --highlight-ink: #1b2240;
+  --accent: #3a55d9;
   --danger: #b42318;
   --danger-wash: #fdecea;
-  --ok: #1f7a4d;
-  --focus: #3b5bdb;
+  --ok: #18794e;
+  --ok-wash: #e6f4ec;
+  --warn: #9a6700;
+  --warn-wash: #fff4d6;
+  --focus: #3a55d9;
+  --shadow: 0 1px 2px rgb(16 22 48 / 0.06), 0 4px 16px -6px rgb(16 22 48 / 0.12);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --paper: #12172a;
-    --surface: #181e34;
-    --ink: #e6e9f2;
-    --slate: #9aa2b8;
-    --rule: #2a3250;
-    --highlight: #8a7314;
+    --paper: #10142a;
+    --surface: #161b33;
+    --sunken: #1b2140;
+    --ink: #e8eaf2;
+    --slate: #a2a9bd;
+    --faint: #737b93;
+    --rule: #262d4b;
+    --rail: #0b0f22;
+    --rail-ink: #e7e9f1;
+    --rail-dim: #8d94ab;
+    --rail-rule: #1f2541;
+    --highlight: #7d6a12;
     --highlight-ink: #fff8d6;
-    --danger: #ff8a7a;
-    --danger-wash: #3a1d22;
+    --accent: #8ea2ff;
+    --danger: #ff8f80;
+    --danger-wash: #3a1d24;
     --ok: #5fd39a;
-    --focus: #8ea4ff;
+    --ok-wash: #15302a;
+    --warn: #f5c451;
+    --warn-wash: #3a3017;
+    --focus: #8ea2ff;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px -8px rgb(0 0 0 / 0.5);
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --paper: #12172a;
-  --surface: #181e34;
-  --ink: #e6e9f2;
-  --slate: #9aa2b8;
-  --rule: #2a3250;
-  --highlight: #8a7314;
+  --paper: #10142a;
+  --surface: #161b33;
+  --sunken: #1b2140;
+  --ink: #e8eaf2;
+  --slate: #a2a9bd;
+  --faint: #737b93;
+  --rule: #262d4b;
+  --rail: #0b0f22;
+  --rail-ink: #e7e9f1;
+  --rail-dim: #8d94ab;
+  --rail-rule: #1f2541;
+  --highlight: #7d6a12;
   --highlight-ink: #fff8d6;
-  --danger: #ff8a7a;
-  --danger-wash: #3a1d22;
+  --accent: #8ea2ff;
+  --danger: #ff8f80;
+  --danger-wash: #3a1d24;
   --ok: #5fd39a;
-  --focus: #8ea4ff;
+  --ok-wash: #15302a;
+  --warn: #f5c451;
+  --warn-wash: #3a3017;
+  --focus: #8ea2ff;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px -8px rgb(0 0 0 / 0.5);
   color-scheme: dark;
 }
 
 @theme inline {
   --color-paper: var(--paper);
   --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
   --color-ink: var(--ink);
   --color-slate: var(--slate);
+  --color-faint: var(--faint);
   --color-rule: var(--rule);
+  --color-rail: var(--rail);
+  --color-rail-ink: var(--rail-ink);
+  --color-rail-dim: var(--rail-dim);
+  --color-rail-rule: var(--rail-rule);
   --color-highlight: var(--highlight);
   --color-highlight-ink: var(--highlight-ink);
+  --color-accent: var(--accent);
   --color-danger: var(--danger);
   --color-danger-wash: var(--danger-wash);
   --color-ok: var(--ok);
+  --color-ok-wash: var(--ok-wash);
+  --color-warn: var(--warn);
+  --color-warn-wash: var(--warn-wash);
+  --shadow-card: var(--shadow);
   --font-sans: 'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -67,20 +114,26 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 3px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--highlight);
+  color: var(--highlight-ink);
 }
 
 /* New roles are marked like a highlighter pass over the title: slightly uneven, never a pill */
 .highlight {
   color: var(--highlight-ink);
-  background-image: linear-gradient(100deg, transparent 0.4em, var(--highlight) 0.5em, var(--highlight) calc(100% - 0.3em), transparent calc(100% - 0.2em));
-  background-size: 100% 0.95em;
-  background-position: 0 72%;
+  background-image: linear-gradient(100deg, transparent 0.35em, var(--highlight) 0.45em, var(--highlight) calc(100% - 0.3em), transparent calc(100% - 0.2em));
+  background-size: 100% 0.92em;
+  background-position: 0 75%;
   background-repeat: no-repeat;
   padding: 0 0.3em;
   margin: 0 -0.3em;
@@ -88,12 +141,37 @@ body {
   -webkit-box-decoration-break: clone;
 }
 
+.skeleton {
+  background: linear-gradient(90deg, var(--sunken) 0%, var(--rule) 50%, var(--sunken) 100%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .highlight-in {
-    animation: swipe 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation: swipe 650ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
   }
   @keyframes swipe {
-    from { background-size: 0% 0.95em; }
-    to { background-size: 100% 0.95em; }
+    from { background-size: 0% 0.92em; }
+    to { background-size: 100% 0.92em; }
   }
+  .skeleton {
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    from { background-position: 100% 0; }
+    to { background-position: -100% 0; }
+  }
+  .toast-in {
+    animation: toast 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  @keyframes toast {
+    from { opacity: 0; transform: translateY(8px); }
+  }
+}
+
+/* Thin, quiet scrollbars for the list and detail panes */
+.scroll-quiet {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule) transparent;
 }

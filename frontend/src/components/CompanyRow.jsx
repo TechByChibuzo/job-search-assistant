@@ -1,112 +1,217 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useDeleteCompany, useSyncCompany, useUpdateCompany } from '../api/hooks'
+import { ExternalLink, Pause, Pencil, Play, RefreshCw, Trash2 } from 'lucide-react'
+import { useDeleteCompany, useStartSync, useSyncProgress, useUpdateCompany } from '../api/hooks'
 import { timeAgo } from '../lib/dates'
-import { ATS_LABELS, boardUrl } from '../lib/labels'
+import { boardLabel, boardUrl, sourceLabel } from '../lib/labels'
+import Monogram from './Monogram'
+import SearchChips from './SearchChips'
+import { useToast } from './Toasts'
 
-function SyncState({ company }) {
-  if (!company.lastSyncStatus) return <span className="text-slate">Not synced yet</span>
-  if (company.lastSyncStatus === 'OK') return <span className="text-slate">Synced {timeAgo(company.lastSyncedAt)}</span>
-  if (company.lastSyncStatus === 'BOARD_NOT_FOUND') {
-    return <span className="text-danger">Board not found. The company may have moved; paste its new careers link.</span>
+function StatusPill({ company, syncing }) {
+  let tone = 'bg-sunken text-slate'
+  let dot = 'bg-faint'
+  let text = 'Not synced yet'
+  if (syncing) {
+    tone = 'bg-sunken text-ink'
+    dot = 'bg-accent motion-safe:animate-pulse'
+    text = 'Syncing now'
+  } else if (company.lastSyncStatus === 'OK') {
+    tone = 'bg-ok-wash text-ok'
+    dot = 'bg-ok'
+    text = `Synced ${timeAgo(company.lastSyncedAt)}`
+  } else if (company.lastSyncStatus === 'BOARD_NOT_FOUND') {
+    tone = 'bg-warn-wash text-warn'
+    dot = 'bg-warn'
+    text = 'Board not found'
+  } else if (company.lastSyncStatus === 'FAILED') {
+    tone = 'bg-danger-wash text-danger'
+    dot = 'bg-danger'
+    text = 'Last sync failed'
   }
-  return <span className="text-danger">Last sync failed: {company.lastSyncError}</span>
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>
+      <span className={`size-1.5 rounded-full ${dot}`} aria-hidden />
+      {text}
+    </span>
+  )
 }
 
-function Relink({ company, focus, onDone }) {
-  const [url, setUrl] = useState('')
-  const update = useUpdateCompany()
+function IconButton({ label, onClick, disabled, danger, children }) {
   return (
-    <form
-      className="mt-3 flex flex-col gap-2 sm:flex-row"
-      onSubmit={(e) => {
-        e.preventDefault()
-        update.mutate({ id: company.id, careersUrl: url.trim() }, { onSuccess: onDone })
-      }}
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className={`inline-flex size-9 items-center justify-center rounded-lg text-slate transition-colors hover:bg-sunken disabled:opacity-40 ${
+        danger ? 'hover:text-danger' : 'hover:text-ink'
+      }`}
     >
-      <input
-        type="text"
-        inputMode="url"
-        required
-        autoFocus={focus}
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        aria-label={`New careers link for ${company.name}`}
-        placeholder="New careers link"
-        className="flex-1 rounded-md border border-rule bg-paper px-3 py-1.5 text-sm focus:border-ink focus:outline-none"
-      />
-      <button type="submit" disabled={update.isPending} className="rounded-md bg-ink px-3 py-1.5 text-sm font-medium text-paper">
-        Save link
-      </button>
-      {update.error && <p className="text-sm text-danger sm:self-center">{update.error.message}</p>}
+      {children}
+    </button>
+  )
+}
+
+const input = 'mt-1.5 h-10 w-full rounded-lg border border-rule bg-paper px-3 text-sm focus:border-accent focus:outline-none'
+
+function EditPanel({ company, focusLink, onDone }) {
+  const toast = useToast()
+  const update = useUpdateCompany()
+  const [name, setName] = useState(company.name)
+  const [search, setSearch] = useState(company.search ?? '')
+  const [url, setUrl] = useState('')
+
+  function save(e) {
+    e.preventDefault()
+    const body = { id: company.id, name: name.trim(), search: search.trim() }
+    if (url.trim()) body.careersUrl = url.trim()
+    update.mutate(body, {
+      onSuccess: () => {
+        toast(`Saved ${name.trim() || company.name}.`)
+        onDone()
+      },
+    })
+  }
+
+  return (
+    <form onSubmit={save} className="mt-4 grid gap-4 rounded-lg border border-rule bg-paper p-4 md:grid-cols-2">
+      <label className="text-sm font-medium">
+        Name
+        <input value={name} onChange={(e) => setName(e.target.value)} className={input} />
+      </label>
+      <label className="text-sm font-medium">
+        Search phrases
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="software engineer, backend"
+          className={input}
+        />
+      </label>
+      <label className="text-sm font-medium md:col-span-2">
+        New careers link <span className="font-normal text-faint">(when the company moves to another system)</span>
+        <input
+          value={url}
+          autoFocus={focusLink}
+          onChange={(e) => setUrl(e.target.value)}
+          inputMode="url"
+          placeholder={company.careersUrl ?? 'https://…'}
+          className={input}
+        />
+      </label>
+      <div className="flex flex-wrap items-center gap-2 md:col-span-2">
+        <button
+          type="submit"
+          disabled={update.isPending}
+          className="h-9 rounded-lg bg-ink px-4 text-sm font-semibold text-paper hover:opacity-90 disabled:opacity-50"
+        >
+          Save changes
+        </button>
+        <button type="button" onClick={onDone} className="h-9 rounded-lg px-3 text-sm font-medium text-slate hover:text-ink">
+          Cancel
+        </button>
+        {update.error && <p className="text-sm text-danger">{update.error.message}</p>}
+      </div>
     </form>
   )
 }
 
-const action = 'rounded-md px-2.5 py-1.5 text-sm font-medium text-slate hover:bg-paper hover:text-ink disabled:opacity-50'
-
 export default function CompanyRow({ company }) {
-  const sync = useSyncCompany()
+  const toast = useToast()
+  const sync = useStartSync()
+  const progress = useSyncProgress()
   const update = useUpdateCompany()
   const remove = useDeleteCompany()
-  // A missing board opens the relink form straight away, but only a click moves focus into it
-  const [relinking, setRelinking] = useState(company.lastSyncStatus === 'BOARD_NOT_FOUND')
+  // A missing board opens the editor straight away, but only a click moves focus into it
+  const [editing, setEditing] = useState(company.lastSyncStatus === 'BOARD_NOT_FOUND')
   const [clicked, setClicked] = useState(false)
 
+  const running = progress.data?.running
+  const syncingThis = running && progress.data?.current === company.name
+  const board = boardLabel(company.ats, company.board)
+
   function confirmRemove() {
-    if (window.confirm(`Remove ${company.name} and its ${company.openJobs} saved roles?`)) remove.mutate(company.id)
+    if (window.confirm(`Remove ${company.name} and its ${company.openJobs} saved roles?`)) {
+      remove.mutate(company.id, { onSuccess: () => toast(`Removed ${company.name}.`) })
+    }
   }
 
   return (
-    <li className={`py-4 ${company.active ? '' : 'opacity-60'}`}>
-      <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+    <li className={`p-5 ${company.active ? '' : 'opacity-60'}`}>
+      <div className="flex flex-wrap items-start gap-4">
+        <Monogram name={company.name} />
         <div className="min-w-0 flex-1">
-          <p className="font-medium">
-            {company.name}
-            {!company.active && <span className="ml-2 text-sm font-normal text-slate">Paused</span>}
-          </p>
-          <p className="mt-0.5 text-sm text-slate">
-            <a href={boardUrl(company.ats, company.board)} target="_blank" rel="noreferrer" className="hover:text-ink hover:underline">
-              {ATS_LABELS[company.ats]} / {company.board}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <p className="font-semibold">{company.name}</p>
+            <StatusPill company={company} syncing={syncingThis} />
+            {!company.active && <span className="text-xs font-medium text-slate">Paused</span>}
+          </div>
+          <p className="mt-1 text-sm text-slate">
+            <a
+              href={boardUrl(company.ats, company.board)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 hover:text-ink"
+            >
+              {sourceLabel(company.ats)}
+              {board && <span className="text-faint">/ {board}</span>}
+              <ExternalLink className="size-3" aria-hidden />
             </a>
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+            <SearchChips search={company.search} />
             {company.openJobs > 0 && (
-              <>
-                {', '}
-                <Link to={`/jobs?companyId=${company.id}`} className="text-ink underline-offset-4 hover:underline">
-                  {company.openJobs.toLocaleString()} open {company.openJobs === 1 ? 'role' : 'roles'}
-                </Link>
-              </>
+              <Link to={`/jobs?companyId=${company.id}`} className="text-sm font-medium text-accent hover:underline">
+                {company.openJobs.toLocaleString()} open {company.openJobs === 1 ? 'role' : 'roles'}
+              </Link>
             )}
-          </p>
-          <p className="mt-1 text-sm">
-            <SyncState company={company} />
-          </p>
+          </div>
+          {company.lastSyncStatus === 'BOARD_NOT_FOUND' && (
+            <p className="mt-3 text-sm text-warn">
+              This board no longer answers. The company has probably moved to another system: paste its new careers link
+              below.
+            </p>
+          )}
+          {company.lastSyncStatus === 'FAILED' && <p className="mt-3 text-sm text-danger">{company.lastSyncError}</p>}
         </div>
-        <div className="flex flex-wrap gap-1">
-          <button type="button" className={action} disabled={sync.isPending} onClick={() => sync.mutate(company.id)}>
-            {sync.isPending ? 'Syncing…' : 'Sync'}
-          </button>
-          <button type="button" className={action} onClick={() => {
+        <div className="flex gap-0.5">
+          <IconButton
+            label="Sync now"
+            disabled={running}
+            onClick={() => sync.mutate(company.id, { onError: (e) => toast(e.message, { tone: 'error' }) })}
+          >
+            <RefreshCw className={`size-4 ${syncingThis ? 'motion-safe:animate-spin' : ''}`} />
+          </IconButton>
+          <IconButton
+            label="Edit"
+            onClick={() => {
               setClicked(true)
-              setRelinking((r) => !r)
-            }}>
-            Change link
-          </button>
-          <button
-            type="button"
-            className={action}
+              setEditing((v) => !v)
+            }}
+          >
+            <Pencil className="size-4" />
+          </IconButton>
+          <IconButton
+            label={company.active ? 'Pause daily sync' : 'Resume daily sync'}
             disabled={update.isPending}
             onClick={() => update.mutate({ id: company.id, active: !company.active })}
           >
-            {company.active ? 'Pause' : 'Resume'}
-          </button>
-          <button type="button" className={`${action} hover:text-danger`} disabled={remove.isPending} onClick={confirmRemove}>
-            Remove
-          </button>
+            {company.active ? <Pause className="size-4" /> : <Play className="size-4" />}
+          </IconButton>
+          <IconButton label="Remove" danger disabled={remove.isPending} onClick={confirmRemove}>
+            <Trash2 className="size-4" />
+          </IconButton>
         </div>
       </div>
-      {sync.error && <p className="mt-2 text-sm text-danger">{sync.error.message}</p>}
-      {relinking && <Relink company={company} focus={clicked} onDone={() => setRelinking(false)} />}
+      {editing && (
+        <EditPanel
+          company={company}
+          focusLink={clicked && company.lastSyncStatus === 'BOARD_NOT_FOUND'}
+          onDone={() => setEditing(false)}
+        />
+      )}
     </li>
   )
 }

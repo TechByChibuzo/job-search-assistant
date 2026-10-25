@@ -1,10 +1,14 @@
-import { useSearchParams, Link } from 'react-router-dom'
-import { useJobs } from '../api/hooks'
+import { useCallback, useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Inbox } from 'lucide-react'
+import { useJobs, useSummary } from '../api/hooks'
 import Filters from '../components/Filters'
-import JobList from '../components/JobList'
 import JobDetail from '../components/JobDetail'
+import JobList, { JobListSkeleton } from '../components/JobList'
+import TodayStrip from '../components/TodayStrip'
+import { useKeyboardNav } from '../lib/useKeyboardNav'
 
-/** Filters and the open job live in the URL, so a view can be bookmarked and Back works. */
+/** Filters and the open role live in the URL, so a view can be bookmarked and Back works. */
 function readFilters(params) {
   return {
     q: params.get('q') ?? '',
@@ -26,74 +30,111 @@ function writeFilters(filters, selected) {
   return next
 }
 
+const NO_FILTERS = readFilters(new URLSearchParams())
+
 function Empty({ hasFilters, onClear }) {
-  if (hasFilters) {
-    return (
-      <div className="px-4 py-12 text-sm">
-        <p>No open roles match these filters.</p>
-        <button type="button" onClick={onClear} className="mt-2 font-medium underline underline-offset-4">
-          Clear the filters
-        </button>
-      </div>
-    )
-  }
   return (
-    <div className="px-4 py-12 text-sm">
-      <p className="font-medium">No roles yet.</p>
-      <p className="mt-1 text-slate">
-        <Link to="/companies" className="font-medium text-ink underline underline-offset-4">
-          Add a company
-        </Link>{' '}
-        by pasting its careers link, and its open roles show up here after the next sync.
-      </p>
+    <div className="flex flex-col items-center px-6 py-16 text-center">
+      <span className="flex size-12 items-center justify-center rounded-full bg-sunken">
+        <Inbox className="size-5 text-slate" aria-hidden />
+      </span>
+      {hasFilters ? (
+        <>
+          <p className="mt-4 font-medium">No open roles match these filters</p>
+          <button type="button" onClick={onClear} className="mt-2 text-sm font-medium text-accent hover:underline">
+            Clear the filters
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="mt-4 font-medium">No roles yet</p>
+          <p className="mt-1 max-w-xs text-sm text-slate">
+            <Link to="/companies" className="font-medium text-accent hover:underline">
+              Add a company
+            </Link>{' '}
+            and sync it. Its open roles will show up here.
+          </p>
+        </>
+      )}
     </div>
   )
 }
 
 export default function JobsPage() {
   const [params, setParams] = useSearchParams()
-  const filters = readFilters(params)
+  const filters = useMemo(() => readFilters(params), [params])
   const selected = params.get('job') ? Number(params.get('job')) : null
   const jobs = useJobs(filters)
+  const maxAgeDays = useSummary().data?.maxAgeDays
 
-  const all = jobs.data?.pages.flatMap((p) => p.content) ?? []
+  const all = useMemo(() => jobs.data?.pages.flatMap((p) => p.content) ?? [], [jobs.data])
+  const ids = useMemo(() => all.map((j) => j.id), [all])
   const total = jobs.data?.pages[0]?.totalElements ?? 0
   const hasFilters = Boolean(filters.q || filters.location || filters.companyId || filters.workplace.length || filters.newOnly)
 
   const setFilters = (f) => setParams(writeFilters(f, selected), { replace: true })
-  const select = (id) => setParams(writeFilters(filters, id))
+  const select = useCallback((id) => setParams(writeFilters(filters, id)), [filters, setParams])
+  const close = useCallback(() => select(null), [select])
+  useKeyboardNav({ ids, selected, onSelect: select, onClose: close })
 
   return (
-    <div className="pt-5">
-      <Filters filters={filters} onChange={setFilters} />
-      <p className="mt-4 text-sm text-slate" aria-live="polite">
-        {jobs.isSuccess && `${total.toLocaleString()} open ${total === 1 ? 'role' : 'roles'}`}
-      </p>
+    <div className="pt-6 lg:pt-10">
+      <header className="flex flex-col gap-5">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Inbox</h1>
+          <div className="mt-2">
+            <TodayStrip
+              activeCompanyId={filters.newOnly ? filters.companyId : null}
+              onPick={(companyId) => {
+                const same = filters.newOnly && String(filters.companyId) === String(companyId)
+                setFilters(same ? NO_FILTERS : { ...NO_FILTERS, companyId: String(companyId), newOnly: true })
+              }}
+            />
+          </div>
+        </div>
+        <Filters filters={filters} onChange={setFilters} />
+      </header>
 
-      <div className="mt-2 grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-        <div className={`border-t border-rule ${selected ? 'hidden lg:block' : ''}`}>
-          {jobs.isPending && <p className="px-4 py-12 text-sm text-slate">Loading roles…</p>}
-          {jobs.error && <p className="px-4 py-12 text-sm text-danger">{jobs.error.message}</p>}
-          {jobs.isSuccess && all.length === 0 && <Empty hasFilters={hasFilters} onClear={() => setFilters(readFilters(new URLSearchParams()))} />}
-          <JobList jobs={all} selectedId={selected} onSelect={select} />
-          {jobs.hasNextPage && (
-            <button
-              type="button"
-              onClick={() => jobs.fetchNextPage()}
-              disabled={jobs.isFetchingNextPage}
-              className="mt-4 w-full rounded-md border border-rule bg-surface py-2 text-sm font-medium hover:border-ink"
-            >
-              {jobs.isFetchingNextPage ? 'Loading…' : `Show more (${(total - all.length).toLocaleString()} left)`}
-            </button>
-          )}
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <div className={selected ? 'hidden lg:block' : ''}>
+          <div className="flex items-baseline justify-between px-1 pb-2 text-sm text-slate">
+            <span aria-live="polite">
+              {jobs.isSuccess &&
+                `${total.toLocaleString()} open ${total === 1 ? 'role' : 'roles'}${maxAgeDays ? ` from the last ${maxAgeDays} days` : ''}`}
+            </span>
+            <span className="hidden text-xs text-faint xl:inline">
+              <kbd className="font-sans">j</kbd> / <kbd className="font-sans">k</kbd> to move
+            </span>
+          </div>
+          <div className="scroll-quiet overflow-hidden rounded-xl border border-rule bg-paper lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto">
+            {jobs.isPending && <JobListSkeleton />}
+            {jobs.error && <p className="px-4 py-12 text-sm text-danger">{jobs.error.message}</p>}
+            {jobs.isSuccess && all.length === 0 && <Empty hasFilters={hasFilters} onClear={() => setFilters(NO_FILTERS)} />}
+            <JobList jobs={all} selectedId={selected} onSelect={select} />
+            {jobs.hasNextPage && (
+              <div className="border-t border-rule p-3">
+                <button
+                  type="button"
+                  onClick={() => jobs.fetchNextPage()}
+                  disabled={jobs.isFetchingNextPage}
+                  className="w-full rounded-lg py-2 text-sm font-medium text-slate hover:bg-surface hover:text-ink"
+                >
+                  {jobs.isFetchingNextPage ? 'Loading…' : `Show more (${(total - all.length).toLocaleString()} left)`}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className={`${selected ? '' : 'hidden lg:block'}`}>
-          <div className="rounded-lg border border-rule bg-surface lg:sticky lg:top-[72px] lg:max-h-[calc(100dvh-88px)] lg:overflow-y-auto">
+        <div className={selected ? '' : 'hidden lg:block'}>
+          <div className="scroll-quiet rounded-xl border border-rule bg-surface shadow-card lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto">
             {selected ? (
-              <JobDetail key={selected} id={selected} onClose={() => select(null)} />
+              <JobDetail key={selected} id={selected} onClose={close} />
             ) : (
-              <p className="p-6 text-sm text-slate">Pick a role to read it here.</p>
+              <div className="flex flex-col items-center px-6 py-24 text-center">
+                <p className="font-medium">Pick a role to read it here</p>
+                <p className="mt-1 text-sm text-slate">Or press j to start at the top.</p>
+              </div>
             )}
           </div>
         </div>

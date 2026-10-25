@@ -1,41 +1,66 @@
 import { useState } from 'react'
+import { CircleAlert, CircleCheck, Plus } from 'lucide-react'
 import { useCreateCompany, useDetect } from '../api/hooks'
-import { ATS_LABELS } from '../lib/labels'
+import { sourceLabel, boardLabel } from '../lib/labels'
 import { useDebounced } from '../lib/useDebounced'
+import { useToast } from './Toasts'
+
+const input =
+  'mt-1.5 h-10 w-full rounded-lg border border-rule bg-paper px-3 text-sm placeholder:text-faint focus:border-accent focus:outline-none'
 
 export default function AddCompanyForm() {
+  const toast = useToast()
   const [url, setUrl] = useState('')
   const [name, setName] = useState('')
+  const [search, setSearch] = useState('')
   const detect = useDetect(useDebounced(url, 400))
   const create = useCreateCompany()
+  const detected = detect.data
+  const needsSearch = detected?.searchBased && !search.trim()
 
   function submit(e) {
     e.preventDefault()
     create.mutate(
-      { careersUrl: url.trim(), name: name.trim() || undefined },
+      { careersUrl: url.trim(), name: name.trim() || undefined, search: search.trim() || undefined },
       {
-        onSuccess: () => {
+        onSuccess: (company) => {
+          toast(`Added ${company.name}. Sync it to pull its open roles.`)
           setUrl('')
           setName('')
+          setSearch('')
         },
       },
     )
   }
 
-  let hint = 'For example jobs.lever.co/palantir or boards.greenhouse.io/airbnb'
-  let hintClass = 'text-slate'
-  if (detect.data) {
-    hint = `${ATS_LABELS[detect.data.ats]} board "${detect.data.board}"`
-    hintClass = 'text-ok'
+  let hint = (
+    <span className="text-faint">
+      Greenhouse, Lever, Ashby, Workday and Avature boards, amazon.jobs and Google Careers.
+    </span>
+  )
+  if (detected) {
+    const board = boardLabel(detected.ats, detected.board)
+    hint = (
+      <span className="inline-flex items-center gap-1.5 text-ok">
+        <CircleCheck className="size-3.5" aria-hidden />
+        {sourceLabel(detected.ats)}
+        {board && <> board &ldquo;{board}&rdquo;</>}
+      </span>
+    )
   } else if (detect.error) {
-    hint = detect.error.message
-    hintClass = 'text-danger'
+    hint = (
+      <span className="inline-flex items-start gap-1.5 text-danger">
+        <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+        {detect.error.message}
+      </span>
+    )
   }
 
   return (
-    <form onSubmit={submit} className="mt-6 rounded-lg border border-rule bg-surface p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-        <div className="flex-1">
+    <form onSubmit={submit} className="rounded-xl border border-rule bg-surface p-5 shadow-card">
+      <h2 className="font-semibold">Add a company</h2>
+      <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div>
           <label htmlFor="careers-url" className="text-sm font-medium">
             Careers link
           </label>
@@ -47,32 +72,58 @@ export default function AddCompanyForm() {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://jobs.ashbyhq.com/openai"
-            className="mt-1 w-full rounded-md border border-rule bg-paper px-3 py-2 text-sm focus:border-ink focus:outline-none"
+            className={input}
             aria-describedby="careers-hint"
           />
-          <span id="careers-hint" className={`mt-1 block text-xs ${hintClass}`}>
+          <p id="careers-hint" className="mt-1.5 text-xs">
             {hint}
-          </span>
+          </p>
         </div>
-        <label className="sm:w-48">
-          <span className="text-sm font-medium">Name</span>
+        <div>
+          <label htmlFor="company-name" className="text-sm font-medium">
+            Name <span className="font-normal text-faint">(optional)</span>
+          </label>
           <input
+            id="company-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="From the link"
-            className="mt-1 w-full rounded-md border border-rule bg-paper px-3 py-2 text-sm focus:border-ink focus:outline-none"
+            placeholder="Taken from the link"
+            className={input}
           />
-        </label>
+        </div>
+        <div className="md:col-span-2">
+          <label htmlFor="company-search" className="text-sm font-medium">
+            Search phrases{' '}
+            <span className="font-normal text-faint">{detected?.searchBased ? '(recommended)' : '(optional)'}</span>
+          </label>
+          <input
+            id="company-search"
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="software engineer, backend"
+            className={input}
+            aria-describedby="search-hint"
+          />
+          <p id="search-hint" className={`mt-1.5 text-xs ${needsSearch ? 'text-warn' : 'text-faint'}`}>
+            {needsSearch
+              ? 'This company posts thousands of roles. Add the kinds you want, separated by commas.'
+              : 'Only keep roles whose title has every word of one phrase. Leave empty for every role.'}
+          </p>
+        </div>
+      </div>
+      <div className="mt-5 flex items-center gap-3">
         <button
           type="submit"
-          disabled={create.isPending || !detect.data}
-          className="rounded-md bg-ink px-4 py-2 text-sm font-medium text-paper hover:opacity-90 disabled:opacity-50 sm:mt-6"
+          disabled={create.isPending || !detected}
+          className="inline-flex h-10 items-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-paper hover:opacity-90 disabled:opacity-40"
         >
+          <Plus className="size-4" aria-hidden />
           {create.isPending ? 'Adding…' : 'Add company'}
         </button>
+        {create.error && <p className="text-sm text-danger">{create.error.message}</p>}
       </div>
-      {create.error && <p className="mt-3 text-sm text-danger">{create.error.message}</p>}
     </form>
   )
 }

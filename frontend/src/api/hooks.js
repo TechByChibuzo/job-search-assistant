@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, toQuery } from './client'
 
@@ -16,6 +17,10 @@ export function useJob(id) {
   return useQuery({ queryKey: ['job', id], queryFn: () => api(`/jobs/${id}`), enabled: id != null })
 }
 
+export function useSummary() {
+  return useQuery({ queryKey: ['summary'], queryFn: () => api('/jobs/summary') })
+}
+
 export function useCompanies() {
   return useQuery({ queryKey: ['companies'], queryFn: () => api('/companies') })
 }
@@ -30,13 +35,10 @@ export function useDetect(careersUrl) {
   })
 }
 
-/** Any change to companies or a sync can change both lists. */
+/** Anything that changes companies or jobs refreshes every list built from them. */
 function useRefresh() {
   const client = useQueryClient()
-  return () => {
-    client.invalidateQueries({ queryKey: ['companies'] })
-    client.invalidateQueries({ queryKey: ['jobs'] })
-  }
+  return () => ['companies', 'jobs', 'summary', 'job'].forEach((key) => client.invalidateQueries({ queryKey: [key] }))
 }
 
 export function useCreateCompany() {
@@ -57,12 +59,36 @@ export function useDeleteCompany() {
   return useMutation({ mutationFn: (id) => api(`/companies/${id}`, { method: 'DELETE' }), onSuccess: refresh })
 }
 
-export function useSyncAll() {
+/**
+ * The background sync. Polls every 1.5 s while a run is going and once a minute otherwise (the daily run
+ * starts on its own). Calls onFinished with the run when one ends, and refreshes the lists.
+ */
+export function useSyncProgress(onFinished) {
   const refresh = useRefresh()
-  return useMutation({ mutationFn: () => api('/sync', { method: 'POST' }), onSuccess: refresh })
+  const query = useQuery({
+    queryKey: ['sync'],
+    queryFn: () => api('/sync'),
+    refetchInterval: (q) => (q.state.data?.running ? 1500 : 60_000),
+  })
+  const wasRunning = useRef(false)
+  const running = query.data?.running ?? false
+  useEffect(() => {
+    if (wasRunning.current && !running && query.data) {
+      refresh()
+      onFinished?.(query.data)
+    }
+    wasRunning.current = running
+    // refresh and onFinished are stable enough; only the running flag should trigger this
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running])
+  return query
 }
 
-export function useSyncCompany() {
-  const refresh = useRefresh()
-  return useMutation({ mutationFn: (id) => api(`/companies/${id}/sync`, { method: 'POST' }), onSuccess: refresh })
+/** Starts a sync of every company, or of one when given its id. */
+export function useStartSync() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (companyId) => api(companyId ? `/companies/${companyId}/sync` : '/sync', { method: 'POST' }),
+    onSuccess: (progress) => client.setQueryData(['sync'], progress),
+  })
 }

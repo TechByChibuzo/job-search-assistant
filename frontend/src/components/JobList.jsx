@@ -1,43 +1,78 @@
-import { groupByFirstSeen } from '../lib/dates'
+import { groupByDay, shortAge } from '../lib/dates'
 import { workplaceLabel } from '../lib/labels'
+import Monogram from './Monogram'
 
 function JobRow({ job, selected, onSelect }) {
-  const where = [job.location, workplaceLabel(job.workplace)].filter(Boolean).join(', ')
+  const workplace = workplaceLabel(job.workplace)
   return (
     <li>
       <button
+        id={`job-${job.id}`}
         type="button"
         onClick={() => onSelect(job.id)}
         aria-current={selected ? 'true' : undefined}
-        className={`group block w-full border-l-2 px-4 py-3 text-left transition-colors ${
-          selected ? 'border-ink bg-surface' : 'border-transparent hover:bg-surface/70'
+        className={`relative flex w-full gap-3 px-4 py-3.5 text-left transition-colors ${
+          selected ? 'bg-surface shadow-card' : 'hover:bg-surface/60'
         }`}
       >
-        <span className="block text-[15px] font-medium leading-snug">
-          <span className={job.isNew ? 'highlight highlight-in' : undefined}>{job.title}</span>
-          {!job.open && <span className="ml-2 text-xs font-normal text-slate">Closed</span>}
+        {selected && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-ink" aria-hidden />}
+        <Monogram name={job.companyName} />
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline gap-3">
+            <span className="min-w-0 flex-1 text-[15px] leading-snug font-medium">
+              <span className={job.isNew ? 'highlight highlight-in' : undefined}>{job.title}</span>
+            </span>
+            {job.listedAt && (
+              <span className="shrink-0 text-xs text-faint" title={job.postedAt ? 'Posted' : 'First seen'}>
+                {shortAge(job.listedAt)}
+              </span>
+            )}
+          </span>
+          <span className="mt-0.5 block truncate text-sm text-slate">
+            {job.companyName}
+            {job.team && <span className="text-faint"> / {job.team}</span>}
+          </span>
+          {(job.location || workplace || !job.open) && (
+            <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-slate">
+              {job.location && <span className="max-w-full truncate">{job.location}</span>}
+              {workplace && <span className="rounded bg-sunken px-1.5 py-0.5 font-medium">{workplace}</span>}
+              {!job.open && <span className="rounded bg-danger-wash px-1.5 py-0.5 font-medium text-danger">Closed</span>}
+            </span>
+          )}
         </span>
-        <span className="mt-0.5 block text-sm text-slate">
-          <span className="font-medium text-ink/80">{job.companyName}</span>
-          {job.team && <> in {job.team}</>}
-        </span>
-        {where && <span className="mt-0.5 block text-sm text-slate">{where}</span>}
       </button>
     </li>
   )
 }
 
 export default function JobList({ jobs, selectedId, onSelect }) {
-  return groupByFirstSeen(jobs).map((group) => (
-    <section key={group.label} aria-label={`First seen ${group.label.toLowerCase()}`}>
-      <h2 className="sticky top-[57px] z-10 border-b border-rule bg-paper px-4 py-2 text-sm font-semibold">
-        {group.label} <span className="font-normal text-slate">{group.jobs.length}</span>
+  return groupByDay(jobs).map((group) => (
+    <section key={group.label} aria-label={group.label}>
+      <h2 className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-rule bg-paper/95 px-4 py-2 text-xs font-semibold text-slate backdrop-blur">
+        {group.label}
+        <span className="font-normal text-faint">{group.jobs.length}</span>
       </h2>
-      <ul className="divide-y divide-rule">
+      <ul className="divide-y divide-rule/70">
         {group.jobs.map((job) => (
           <JobRow key={job.id} job={job} selected={job.id === selectedId} onSelect={onSelect} />
         ))}
       </ul>
     </section>
   ))
+}
+
+export function JobListSkeleton() {
+  return (
+    <ul className="divide-y divide-rule/70" aria-label="Loading roles">
+      {Array.from({ length: 7 }, (_, i) => (
+        <li key={i} className="flex gap-3 px-4 py-4">
+          <span className="skeleton size-9 shrink-0" />
+          <span className="flex-1 space-y-2">
+            <span className="skeleton block h-4 w-3/4" />
+            <span className="skeleton block h-3 w-1/3" />
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
 }
