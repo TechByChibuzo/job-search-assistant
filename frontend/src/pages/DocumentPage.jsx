@@ -286,6 +286,12 @@ export default function DocumentPage() {
             Left out of skills because your resume doesn&rsquo;t name them: {content.droppedSkills.join(', ')}.
           </p>
         )}
+        {content.droppedContact?.length > 0 && (
+          <p className="mt-2 rounded-lg bg-warn-wash px-4 py-3 text-sm text-warn">
+            Removed from your contact line because your resume doesn&rsquo;t have them: {content.droppedContact.join(', ')}.
+            If one is a link you didn&rsquo;t write, the job posting may have tried to slip it in.
+          </p>
+        )}
         <p className="mt-2 text-xs text-faint">
           Made {formatDate(d.createdAt)} with {d.model}. Printing tip: choose &ldquo;Save as PDF&rdquo; and turn off headers and
           footers.

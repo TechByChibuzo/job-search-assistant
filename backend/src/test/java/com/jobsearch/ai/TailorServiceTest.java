@@ -53,6 +53,19 @@ class TailorServiceTest {
     }
 
     @Test
+    void dropsContactDetailsTheResumeDoesntHave() throws Exception {
+        SourceCheck withContact = new SourceCheck("""
+                Jane Doe. jane@example.com | github.com/janedoe. Experience. Software Engineer at Oracle Corporation.""");
+        JsonNode answer = json.readTree("""
+                {"name": "Jane Doe", "contact": ["jane@example.com", "github.com/janedoe", "evil.example/login"], "sections": []}""");
+
+        JsonNode doc = service.checkResume(answer, withContact);
+
+        assertThat(doc.path("contact").toString()).isEqualTo("[\"jane@example.com\",\"github.com/janedoe\"]");
+        assertThat(doc.path("droppedContact").toString()).contains("evil.example/login");
+    }
+
+    @Test
     void theResumeRequestKeepsTheLayoutAndAddsNoSummary() {
         assertThat(TailorService.RESUME).contains("no summary", "same headings, in the same order", "**double asterisks**");
         assertThat(TailorService.RESUME_SCHEMA.toString()).doesNotContain("summary").contains("skillGroups", "titleRight");
