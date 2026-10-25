@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNeedsSponsorship } from '../lib/visa'
 import { api, toQuery } from './client'
 
 const PAGE_SIZE = 50
@@ -17,8 +18,10 @@ export function useJob(id) {
   return useQuery({ queryKey: ['job', id], queryFn: () => api(`/jobs/${id}`), enabled: id != null })
 }
 
+/** The inbox header's counts, leaving out roles closed to the owner when they need sponsorship. */
 export function useSummary() {
-  return useQuery({ queryKey: ['summary'], queryFn: () => api('/jobs/summary') })
+  const needsSponsorship = useNeedsSponsorship()
+  return useQuery({ queryKey: ['summary', needsSponsorship], queryFn: () => api(`/jobs/summary${toQuery({ needsSponsorship })}`) })
 }
 
 export function useCompanies() {

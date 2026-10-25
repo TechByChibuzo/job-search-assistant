@@ -71,10 +71,11 @@ function EditPanel({ company, focusLink, onDone }) {
   const [search, setSearch] = useState(company.search ?? '')
   const [url, setUrl] = useState('')
   const [domain, setDomain] = useState(company.domain ?? '')
+  const [noSponsorship, setNoSponsorship] = useState(company.noSponsorship)
 
   function save(e) {
     e.preventDefault()
-    const body = { id: company.id, name: name.trim(), search: search.trim(), domain: domain.trim() }
+    const body = { id: company.id, name: name.trim(), search: search.trim(), domain: domain.trim(), noSponsorship }
     if (url.trim()) body.careersUrl = url.trim()
     update.mutate(body, {
       onSuccess: () => {
@@ -116,6 +117,21 @@ function EditPanel({ company, focusLink, onDone }) {
           />
         </label>
       )}
+      <label className="flex items-start gap-2.5 text-sm md:col-span-2">
+        <input
+          type="checkbox"
+          checked={noSponsorship}
+          onChange={(e) => setNoSponsorship(e.target.checked)}
+          className="mt-0.5 size-4 accent-ink"
+        />
+        <span>
+          <span className="font-medium">Doesn&rsquo;t sponsor visas</span>
+          <span className="block text-faint">
+            Hides all its roles when you turn on &ldquo;Hide no-sponsorship&rdquo; in the inbox, even ones whose posting doesn&rsquo;t
+            say.
+          </span>
+        </span>
+      </label>
       <div className="flex flex-wrap items-center gap-2 md:col-span-2">
         <button
           type="submit"
@@ -162,6 +178,9 @@ export default function CompanyRow({ company }) {
             <p className="font-semibold">{company.name}</p>
             <StatusPill company={company} syncing={syncingThis} />
             {!company.active && <span className="text-xs font-medium text-slate">Paused</span>}
+            {company.noSponsorship && (
+              <span className="rounded-full bg-warn-wash px-2.5 py-1 text-xs font-medium text-warn">Doesn&rsquo;t sponsor</span>
+            )}
           </div>
           <p className="mt-1 text-sm text-slate">
             {company.ats === 'MANUAL' ? (

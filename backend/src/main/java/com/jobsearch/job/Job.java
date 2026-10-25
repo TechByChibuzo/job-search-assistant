@@ -82,6 +82,13 @@ public class Job {
 
     private Instant matchedAt;
 
+    /** What the description says about visas and legal status; null when it says nothing restrictive. */
+    @Enumerated(EnumType.STRING)
+    private VisaRestriction visaRestriction;
+
+    /** The sentence the restriction was read from. */
+    private String visaEvidence;
+
     protected Job() {}
 
     Job(Company company, FetchedJob fetched, Instant now, boolean baseline) {
@@ -109,8 +116,24 @@ public class Job {
         this.postedAt = fetched.postedAt();
         this.url = fetched.url();
         this.description = fetched.description();
+        checkVisa();
         this.lastSeenAt = now;
         this.closedAt = null;
+    }
+
+    /** Reads the description for visa and legal status restrictions; rerun when the rules improve. */
+    void checkVisa() {
+        VisaCheck.Result result = VisaCheck.check(description);
+        this.visaRestriction = result.restriction();
+        this.visaEvidence = result.evidence();
+    }
+
+    public VisaRestriction getVisaRestriction() {
+        return visaRestriction;
+    }
+
+    public String getVisaEvidence() {
+        return visaEvidence;
     }
 
     void close(Instant now) {

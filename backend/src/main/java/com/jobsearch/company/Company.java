@@ -36,6 +36,9 @@ public class Company {
 
     private boolean active = true;
 
+    /** Set by the owner: the company doesn't sponsor visas, whatever its postings say. */
+    private boolean noSponsorship;
+
     @Column(insertable = false, updatable = false)
     private Instant createdAt;
 
@@ -96,6 +99,14 @@ public class Company {
 
     public void rename(String name) {
         this.name = name;
+    }
+
+    public boolean isNoSponsorship() {
+        return noSponsorship;
+    }
+
+    public void setNoSponsorship(boolean noSponsorship) {
+        this.noSponsorship = noSponsorship;
     }
 
     public void setActive(boolean active) {

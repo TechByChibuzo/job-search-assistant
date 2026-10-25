@@ -271,6 +271,37 @@ class ApiIT {
     }
 
     @Test
+    void someoneWhoNeedsSponsorshipCanHideRolesClosedToThem() throws Exception {
+        long id = createCompany("https://boards.greenhouse.io/acme");
+        Instant posted = Instant.now().minus(Duration.ofHours(2));
+        feed.returns(
+                new FetchedJob("1", "Satellite Engineer", null, null, Workplace.UNKNOWN, null, posted, "https://example.com/jobs/1",
+                        "Build ground software. Candidates must be a U.S. citizen or national. Apply today."),
+                new FetchedJob("2", "Chip Engineer", null, null, Workplace.UNKNOWN, null, posted, "https://example.com/jobs/2",
+                        "Candidates for this role may need to meet certain legal status requirements."),
+                job("3", "Backend Engineer", null, null, Workplace.UNKNOWN));
+        syncCompany(id);
+
+        mvc.perform(get("/api/jobs")).andExpect(jsonPath("$.totalElements").value(3));
+        mvc.perform(get("/api/jobs").param("needsSponsorship", "true"))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[?(@.title == 'Chip Engineer')].visaRestriction").value("MAY_BE_RESTRICTED"));
+        mvc.perform(get("/api/jobs/summary")).andExpect(jsonPath("$.newJobs").value(3));
+        mvc.perform(get("/api/jobs/summary").param("needsSponsorship", "true")).andExpect(jsonPath("$.newJobs").value(2));
+        long restricted = jobs.findByCompanyId(id).stream().filter(j -> j.getExternalId().equals("1")).findFirst().orElseThrow().getId();
+        mvc.perform(get("/api/jobs/" + restricted))
+                .andExpect(jsonPath("$.summary.visaRestriction").value("CITIZENS_ONLY"))
+                .andExpect(jsonPath("$.visaEvidence").value("Candidates must be a U.S. citizen or national."));
+
+        // The owner knows this company doesn't sponsor, whatever its postings say
+        mvc.perform(patch("/api/companies/" + id).contentType(MediaType.APPLICATION_JSON).content("{\"noSponsorship\": true}"))
+                .andExpect(jsonPath("$.noSponsorship").value(true));
+        mvc.perform(get("/api/jobs").param("needsSponsorship", "true")).andExpect(jsonPath("$.totalElements").value(0));
+        mvc.perform(get("/api/jobs/summary").param("needsSponsorship", "true")).andExpect(jsonPath("$.newJobs").value(0));
+        mvc.perform(get("/api/jobs")).andExpect(jsonPath("$.content[0].companyNoSponsorship").value(true));
+    }
+
+    @Test
     void unknownIdsAnswer404AsProblemDetails() throws Exception {
         mvc.perform(get("/api/jobs/999999"))
                 .andExpect(status().isNotFound())

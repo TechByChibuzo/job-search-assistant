@@ -8,6 +8,7 @@ import JobDetail from '../components/JobDetail'
 import JobList, { JobListSkeleton } from '../components/JobList'
 import TodayStrip from '../components/TodayStrip'
 import { useKeyboardNav } from '../lib/useKeyboardNav'
+import { setNeedsSponsorship, useNeedsSponsorship } from '../lib/visa'
 import { secondaryButton } from '../lib/ui'
 
 /** Filters and the open role live in the URL, so a view can be bookmarked and Back works. */
@@ -68,7 +69,8 @@ export default function JobsPage() {
   const [params, setParams] = useSearchParams()
   const filters = useMemo(() => readFilters(params), [params])
   const selected = params.get('job') ? Number(params.get('job')) : null
-  const jobs = useJobs(filters)
+  const needsSponsorship = useNeedsSponsorship()
+  const jobs = useJobs({ ...filters, needsSponsorship })
   const maxAgeDays = useSummary().data?.maxAgeDays
   const [adding, setAdding] = useState(false)
 
@@ -103,7 +105,12 @@ export default function JobsPage() {
             />
           </div>
         </div>
-        <Filters filters={filters} onChange={setFilters} />
+        <Filters
+          filters={filters}
+          onChange={setFilters}
+          needsSponsorship={needsSponsorship}
+          onNeedsSponsorship={setNeedsSponsorship}
+        />
       </header>
       <AddRoleDialog open={adding} onClose={() => setAdding(false)} onAdded={(id) => select(id)} />
 
@@ -112,7 +119,9 @@ export default function JobsPage() {
           <div className="flex items-baseline justify-between px-1 pb-2 text-sm text-slate">
             <span aria-live="polite">
               {jobs.isSuccess &&
-                `${total.toLocaleString()} open ${total === 1 ? 'role' : 'roles'}${maxAgeDays ? ` from the last ${maxAgeDays} days` : ''}`}
+                `${total.toLocaleString()} open ${total === 1 ? 'role' : 'roles'}${maxAgeDays ? ` from the last ${maxAgeDays} days` : ''}${
+                  needsSponsorship ? ', without the ones that won’t sponsor' : ''
+                }`}
             </span>
             <span className="hidden text-xs text-faint xl:inline">
               <kbd className="font-sans">j</kbd> / <kbd className="font-sans">k</kbd> to move

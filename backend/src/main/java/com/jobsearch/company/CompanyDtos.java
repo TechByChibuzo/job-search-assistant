@@ -26,7 +26,8 @@ final class CompanyDtos {
             @Size(max = 2000) String careersUrl,
             Boolean active,
             @Size(max = 500) String search,
-            @Size(max = 300) String domain) {}
+            @Size(max = 300) String domain,
+            Boolean noSponsorship) {}
 
     record DetectRequest(@NotBlank @Size(max = 2000) String careersUrl) {}
 
@@ -48,6 +49,7 @@ final class CompanyDtos {
             String domain,
             boolean searchBased,
             boolean active,
+            boolean noSponsorship,
             long openJobs,
             Instant lastSyncedAt,
             SyncStatus lastSyncStatus,
@@ -64,6 +66,7 @@ final class CompanyDtos {
                     c.getDomain(),
                     c.getAts().isSearchBased(),
                     c.isActive(),
+                    c.isNoSponsorship(),
                     openJobs,
                     c.getLastSyncedAt(),
                     c.getLastSyncStatus(),

@@ -82,6 +82,9 @@ public class CompanyService {
         if (notBlank(request.name())) {
             company.rename(request.name().strip());
         }
+        if (request.noSponsorship() != null) {
+            company.setNoSponsorship(request.noSponsorship());
+        }
         if (request.active() != null) {
             company.setActive(request.active());
         }

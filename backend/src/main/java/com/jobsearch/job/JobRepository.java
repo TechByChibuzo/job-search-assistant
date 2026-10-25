@@ -17,6 +17,8 @@ interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecut
 
     List<Job> findByCompanyId(Long companyId);
 
+    List<Job> findByClosedAtIsNullAndDescriptionIsNotNull();
+
     Optional<Job> findFirstByUrl(String url);
 
     /** Roles whose own id appears in a page's link: an application page usually carries the posting's id. */
@@ -50,14 +52,20 @@ interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecut
     @Query("select j.company.id as companyId, count(j) as openJobs from Job j where j.closedAt is null group by j.company.id")
     List<OpenJobCount> countOpenByCompany();
 
-    /** New roles per company: first seen after {@code since}, not part of a first import, still open. */
+    /**
+     * New roles per company: first seen after {@code since}, not part of a first import, still open. With
+     * {@code needsSponsorship}, roles closed to someone who needs a visa don't count (see {@link JobFilter}).
+     */
     @Query("""
             select j.company.id as companyId, j.company.name as companyName, count(j) as newJobs
             from Job j
             where j.closedAt is null and j.baseline = false and j.firstSeenAt > :since
+              and (:needsSponsorship = false
+                   or ((j.visaRestriction is null or j.visaRestriction = com.jobsearch.job.VisaRestriction.MAY_BE_RESTRICTED)
+                       and j.company.noSponsorship = false))
             group by j.company.id, j.company.name
             order by count(j) desc, j.company.name""")
-    List<NewJobCount> countNewByCompany(Instant since);
+    List<NewJobCount> countNewByCompany(Instant since, boolean needsSponsorship);
 
     interface NewJobCount {
         Long getCompanyId();

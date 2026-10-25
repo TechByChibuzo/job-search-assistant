@@ -30,7 +30,9 @@ final class JobDtos {
             boolean open,
             boolean manual,
             Integer matchScore,
-            String matchSummary) {
+            String matchSummary,
+            VisaRestriction visaRestriction,
+            boolean companyNoSponsorship) {
 
         static JobSummary of(Job job, Instant newSince) {
             return new JobSummary(
@@ -49,7 +51,9 @@ final class JobDtos {
                     job.isOpen(),
                     job.isManual(),
                     job.getMatchScore(),
-                    job.getMatchSummary());
+                    job.getMatchSummary(),
+                    job.getVisaRestriction(),
+                    job.getCompany().isNoSponsorship());
         }
     }
 
@@ -85,11 +89,12 @@ final class JobDtos {
             Instant closedAt,
             List<String> matchStrengths,
             List<String> matchGaps,
-            Instant matchedAt) {
+            Instant matchedAt,
+            String visaEvidence) {
 
         static JobDetail of(Job job, Instant newSince) {
             return new JobDetail(JobSummary.of(job, newSince), job.getDescription(), job.getLastSeenAt(), job.getClosedAt(),
-                    job.getMatchStrengths(), job.getMatchGaps(), job.getMatchedAt());
+                    job.getMatchStrengths(), job.getMatchGaps(), job.getMatchedAt(), job.getVisaEvidence());
         }
     }
 }

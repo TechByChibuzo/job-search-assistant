@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Search, MapPin, Sparkles } from 'lucide-react'
+import { Search, MapPin, Sparkles, Stamp } from 'lucide-react'
 import { useCompanies } from '../api/hooks'
 import { WORKPLACES } from '../lib/labels'
 import { useDebounced } from '../lib/useDebounced'
@@ -30,7 +30,7 @@ function DebouncedInput({ value, onChange, icon: Icon, className = '', ...props 
   )
 }
 
-export default function Filters({ filters, onChange }) {
+export default function Filters({ filters, onChange, needsSponsorship = false, onNeedsSponsorship }) {
   const companies = useCompanies()
   const set = (patch) => onChange({ ...filters, ...patch })
 
@@ -110,6 +110,20 @@ export default function Filters({ filters, onChange }) {
         <Sparkles className="size-4" aria-hidden />
         New only
       </button>
+      {onNeedsSponsorship && (
+        <button
+          type="button"
+          aria-pressed={needsSponsorship}
+          onClick={() => onNeedsSponsorship(!needsSponsorship)}
+          title="Hide roles for U.S. citizens or green card holders only, roles needing a clearance, roles that say they won't sponsor, and companies you've marked as not sponsoring"
+          className={`inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors ${
+            needsSponsorship ? 'border-ink bg-ink text-paper' : 'border-rule bg-surface text-slate hover:text-ink'
+          }`}
+        >
+          <Stamp className="size-4" aria-hidden />
+          Hide no-sponsorship
+        </button>
+      )}
     </div>
   )
 }

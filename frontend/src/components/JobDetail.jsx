@@ -1,9 +1,10 @@
-import { ArrowLeft, Check, Copy, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Check, Copy, ExternalLink, Stamp } from 'lucide-react'
 import { useState } from 'react'
 import { useJob, useSetJobClosed } from '../api/hooks'
 import { formatDate, timeAgo } from '../lib/dates'
 import { workplaceLabel } from '../lib/labels'
 import { safeHref } from '../lib/links'
+import { visaNote } from '../lib/visa'
 import Description from './Description'
 import CompanyLogo from './CompanyLogo'
 import DocumentsPanel from './DocumentsPanel'
@@ -51,7 +52,8 @@ export default function JobDetail({ id, onClose }) {
   if (isPending) return <DetailSkeleton />
   if (error) return <p className="p-8 text-sm text-danger">{error.message}</p>
 
-  const { summary: job, description, closedAt } = data
+  const { summary: job, description, closedAt, visaEvidence } = data
+  const visa = visaNote(job)
   const postingUrl = safeHref(job.url)
   const facts = [
     ['Team', job.team],
@@ -91,6 +93,24 @@ export default function JobDetail({ id, onClose }) {
             </div>
           ))}
         </dl>
+        {visa && (
+          <div
+            className={`mt-5 flex gap-3 rounded-lg px-4 py-3 text-sm ${visa.excludes ? 'bg-warn-wash text-warn' : 'bg-sunken text-slate'}`}
+          >
+            <Stamp className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <div>
+              <p className="font-semibold">{visa.label}</p>
+              {visaEvidence && (
+                <p className="mt-0.5">
+                  The posting says: &ldquo;{visaEvidence}&rdquo;
+                </p>
+              )}
+              {job.companyNoSponsorship && (
+                <p className="mt-0.5">You marked {job.companyName} as not sponsoring visas, on the Companies page.</p>
+              )}
+            </div>
+          </div>
+        )}
         <div className="mt-7 flex flex-wrap gap-2">
           {postingUrl && (
             <>
