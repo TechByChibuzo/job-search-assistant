@@ -3,6 +3,7 @@ import AppShell from './components/AppShell'
 import JobsPage from './pages/JobsPage'
 import CompaniesPage from './pages/CompaniesPage'
 import PeoplePage from './pages/PeoplePage'
+import ProfilePage from './pages/ProfilePage'
 import TrackerPage from './pages/TrackerPage'
 
 export default function App() {
@@ -14,6 +15,7 @@ export default function App() {
         <Route path="/tracker" element={<TrackerPage />} />
         <Route path="/people" element={<PeoplePage />} />
         <Route path="/companies" element={<CompaniesPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/jobs" replace />} />
       </Routes>
     </AppShell>

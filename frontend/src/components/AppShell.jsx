@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Building2, Inbox, KanbanSquare, Monitor, Moon, Sun, Users } from 'lucide-react'
+import { Building2, CircleUserRound, Inbox, KanbanSquare, Monitor, Moon, Sun, Users } from 'lucide-react'
 import { useCompanies, useContacts, useDue, useSummary } from '../api/hooks'
 import { useTheme } from '../lib/theme'
 import SyncPanel from './SyncPanel'
@@ -95,6 +95,7 @@ export default function AppShell({ children }) {
           <RailLink to="/tracker" icon={KanbanSquare} label="Tracker" count={due.data?.length ?? 0} alert />
           <RailLink to="/people" icon={Users} label="People" count={people.data?.length ?? 0} />
           <RailLink to="/companies" icon={Building2} label="Companies" count={companies.data?.length ?? 0} />
+          <RailLink to="/profile" icon={CircleUserRound} label="Profile" />
         </nav>
         <div className="mt-auto flex flex-col gap-3">
           <SyncPanel />
@@ -119,6 +120,7 @@ export default function AppShell({ children }) {
           </MobileTab>
           <MobileTab to="/people">People</MobileTab>
           <MobileTab to="/companies">Companies</MobileTab>
+          <MobileTab to="/profile">Profile</MobileTab>
         </nav>
       </header>
 

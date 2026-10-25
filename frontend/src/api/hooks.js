@@ -194,3 +194,21 @@ export function useMatch() {
 export function useDraft() {
   return useMutation({ mutationFn: (body) => api('/drafts', { method: 'POST', body }) })
 }
+
+// Applicant profile, for the extension's form filling
+
+export function useProfile() {
+  return useQuery({ queryKey: ['profile'], queryFn: () => api('/profile') })
+}
+
+export function useSaveProfile() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (fields) => api('/profile', { method: 'PUT', body: fields }),
+    onSuccess: (profile) => client.setQueryData(['profile'], profile),
+  })
+}
+
+export function useProfileFromResume() {
+  return useMutation({ mutationFn: () => api('/profile/from-resume', { method: 'POST' }) })
+}
