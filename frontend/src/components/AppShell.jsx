@@ -8,11 +8,7 @@ function Brand({ className = '' }) {
   return (
     <span className={`flex items-center gap-2.5 font-semibold tracking-tight ${className}`}>
       <img src="/favicon.svg" alt="" className="size-7" />
-      <span className="leading-tight">
-        Job Search
-        <br />
-        Assistant
-      </span>
+      <span className="leading-tight whitespace-nowrap">Job Search Assistant</span>
     </span>
   )
 }

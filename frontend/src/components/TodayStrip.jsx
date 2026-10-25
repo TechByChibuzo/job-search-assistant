@@ -1,5 +1,5 @@
 import { useSummary } from '../api/hooks'
-import Monogram from './Monogram'
+import CompanyLogo from './CompanyLogo'
 
 /**
  * Today's digest: how many roles are new and at which companies. Each company is a shortcut to its new
@@ -34,7 +34,7 @@ export default function TodayStrip({ onPick, activeCompanyId }) {
                   active ? 'border-ink bg-ink text-paper' : 'border-rule bg-surface hover:border-slate'
                 }`}
               >
-                <Monogram name={c.companyName} size="sm" />
+                <CompanyLogo companyId={c.companyId} name={c.companyName} size="sm" />
                 <span className="font-medium">{c.companyName}</span>
                 <span className={active ? 'text-paper/70' : 'text-faint'}>{c.newJobs}</span>
               </button>

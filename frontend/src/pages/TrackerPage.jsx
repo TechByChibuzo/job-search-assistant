@@ -4,7 +4,7 @@ import { BellRing, ChevronDown, KanbanSquare } from 'lucide-react'
 import { useDue, usePursuits, useRecordEvent, useSummary } from '../api/hooks'
 import Drawer from '../components/Drawer'
 import JobDetail from '../components/JobDetail'
-import Monogram from '../components/Monogram'
+import CompanyLogo from '../components/CompanyLogo'
 import { Pill } from '../components/StatusPill'
 import { useToast } from '../components/Toasts'
 import { timeAgo } from '../lib/dates'
@@ -34,7 +34,7 @@ function DueList() {
     <ul className="divide-y divide-rule overflow-hidden rounded-xl border border-rule bg-surface shadow-card">
       {items.map((o) => (
         <li key={o.id} className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4">
-          <Monogram name={o.person.companyName} />
+          <CompanyLogo companyId={o.person.companyId} name={o.person.companyName} />
           <div className="min-w-0 flex-1">
             <p className="text-[15px]">
               Follow up with{' '}
@@ -90,7 +90,7 @@ function Card({ pursuit: p, onOpen }) {
         className="w-full rounded-xl border border-rule bg-surface p-3.5 text-left shadow-card transition-colors hover:border-slate"
       >
         <span className="flex items-center gap-2.5">
-          <Monogram name={p.role.companyName} size="sm" />
+          <CompanyLogo companyId={p.role.companyId} name={p.role.companyName} size="sm" />
           <span className="truncate text-sm text-slate">{p.role.companyName}</span>
         </span>
         <span className="mt-2 block text-sm leading-snug font-medium">{p.role.title}</span>

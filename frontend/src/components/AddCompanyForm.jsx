@@ -8,7 +8,8 @@ import { useToast } from './Toasts'
 const input =
   'mt-1.5 h-10 w-full rounded-lg border border-rule bg-paper px-3 text-sm placeholder:text-faint focus:border-accent focus:outline-none'
 
-export default function AddCompanyForm() {
+/** The add-company form, shown in a dialog; {@code onAdded} closes it. */
+export default function AddCompanyForm({ onAdded }) {
   const toast = useToast()
   const [url, setUrl] = useState('')
   const [name, setName] = useState('')
@@ -28,6 +29,7 @@ export default function AddCompanyForm() {
           setUrl('')
           setName('')
           setSearch('')
+          onAdded?.()
         },
       },
     )
@@ -57,9 +59,8 @@ export default function AddCompanyForm() {
   }
 
   return (
-    <form onSubmit={submit} className="rounded-xl border border-rule bg-surface p-5 shadow-card">
-      <h2 className="font-semibold">Add a company</h2>
-      <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <form onSubmit={submit}>
+      <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div>
           <label htmlFor="careers-url" className="text-sm font-medium">
             Careers link
@@ -113,7 +114,8 @@ export default function AddCompanyForm() {
           </p>
         </div>
       </div>
-      <div className="mt-5 flex items-center gap-3">
+      <div className="mt-6 flex items-center justify-end gap-3">
+        {create.error && <p className="mr-auto text-sm text-danger">{create.error.message}</p>}
         <button
           type="submit"
           disabled={create.isPending || !detected}
@@ -122,7 +124,6 @@ export default function AddCompanyForm() {
           <Plus className="size-4" aria-hidden />
           {create.isPending ? 'Adding…' : 'Add company'}
         </button>
-        {create.error && <p className="text-sm text-danger">{create.error.message}</p>}
       </div>
     </form>
   )

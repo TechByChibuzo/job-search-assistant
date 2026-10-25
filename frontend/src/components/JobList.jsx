@@ -1,7 +1,7 @@
 import { groupByDay, shortAge } from '../lib/dates'
 import { workplaceLabel } from '../lib/labels'
 import FitScore from './FitScore'
-import Monogram from './Monogram'
+import CompanyLogo from './CompanyLogo'
 
 function JobRow({ job, selected, onSelect }) {
   const workplace = workplaceLabel(job.workplace)
@@ -17,11 +17,11 @@ function JobRow({ job, selected, onSelect }) {
         }`}
       >
         {selected && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-ink" aria-hidden />}
-        <Monogram name={job.companyName} />
+        <CompanyLogo companyId={job.companyId} name={job.companyName} />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-3">
             <span className="min-w-0 flex-1 text-[15px] leading-snug font-medium">
-              <span className={job.isNew ? 'highlight highlight-in' : undefined}>{job.title}</span>
+              <span className={job.isNew ? 'highlight-soft highlight-in' : undefined}>{job.title}</span>
             </span>
             <span className="flex shrink-0 items-center gap-2">
               {job.listedAt && (

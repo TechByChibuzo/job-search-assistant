@@ -3,7 +3,7 @@ import { ExternalLink, Pencil, Trash2, UserPlus } from 'lucide-react'
 import { useCompanies, useContacts, useCreateContact, useDeleteContact, useUpdateContact } from '../api/hooks'
 import Dialog from '../components/Dialog'
 import { Field } from '../components/Field'
-import Monogram from '../components/Monogram'
+import CompanyLogo from '../components/CompanyLogo'
 import PersonFields from '../components/PersonFields'
 import { OutreachPill } from '../components/StatusPill'
 import { useToast } from '../components/Toasts'
@@ -152,7 +152,7 @@ export default function PeoplePage() {
         {groups.map(([company, people]) => (
           <section key={company} aria-label={company}>
             <h2 className="flex items-center gap-2 text-sm font-semibold">
-              <Monogram name={company} size="sm" />
+              <CompanyLogo companyId={people[0].companyId} name={company} size="sm" />
               {company}
             </h2>
             <ul className="mt-2 divide-y divide-rule overflow-hidden rounded-xl border border-rule bg-surface shadow-card">

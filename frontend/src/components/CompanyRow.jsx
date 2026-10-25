@@ -5,7 +5,7 @@ import { useDeleteCompany, useStartSync, useSyncProgress, useUpdateCompany } fro
 import { timeAgo } from '../lib/dates'
 import { boardLabel, boardUrl, sourceLabel } from '../lib/labels'
 import { safeHref } from '../lib/links'
-import Monogram from './Monogram'
+import CompanyLogo from './CompanyLogo'
 import SearchChips from './SearchChips'
 import { useToast } from './Toasts'
 
@@ -70,10 +70,11 @@ function EditPanel({ company, focusLink, onDone }) {
   const [name, setName] = useState(company.name)
   const [search, setSearch] = useState(company.search ?? '')
   const [url, setUrl] = useState('')
+  const [domain, setDomain] = useState(company.domain ?? '')
 
   function save(e) {
     e.preventDefault()
-    const body = { id: company.id, name: name.trim(), search: search.trim() }
+    const body = { id: company.id, name: name.trim(), search: search.trim(), domain: domain.trim() }
     if (url.trim()) body.careersUrl = url.trim()
     update.mutate(body, {
       onSuccess: () => {
@@ -99,16 +100,22 @@ function EditPanel({ company, focusLink, onDone }) {
         />
       </label>
       <label className="text-sm font-medium md:col-span-2">
-        New careers link <span className="font-normal text-faint">(when the company moves to another system)</span>
-        <input
-          value={url}
-          autoFocus={focusLink}
-          onChange={(e) => setUrl(e.target.value)}
-          inputMode="url"
-          placeholder={company.careersUrl ?? 'https://…'}
-          className={input}
-        />
+        Website <span className="font-normal text-faint">(for the logo; fix it if the logo is wrong)</span>
+        <input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="airbnb.com" className={input} />
       </label>
+      {company.ats !== 'MANUAL' && (
+        <label className="text-sm font-medium md:col-span-2">
+          New careers link <span className="font-normal text-faint">(when the company moves to another system)</span>
+          <input
+            value={url}
+            autoFocus={focusLink}
+            onChange={(e) => setUrl(e.target.value)}
+            inputMode="url"
+            placeholder={company.careersUrl ?? 'https://…'}
+            className={input}
+          />
+        </label>
+      )}
       <div className="flex flex-wrap items-center gap-2 md:col-span-2">
         <button
           type="submit"
@@ -149,7 +156,7 @@ export default function CompanyRow({ company }) {
   return (
     <li className={`p-5 ${company.active ? '' : 'opacity-60'}`}>
       <div className="flex flex-wrap items-start gap-4">
-        <Monogram name={company.name} />
+        <CompanyLogo companyId={company.id} name={company.name} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <p className="font-semibold">{company.name}</p>

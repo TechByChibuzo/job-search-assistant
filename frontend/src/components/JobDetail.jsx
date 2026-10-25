@@ -5,7 +5,7 @@ import { formatDate, timeAgo } from '../lib/dates'
 import { workplaceLabel } from '../lib/labels'
 import { safeHref } from '../lib/links'
 import Description from './Description'
-import Monogram from './Monogram'
+import CompanyLogo from './CompanyLogo'
 import FitPanel from './FitPanel'
 import TrackPanel from './TrackPanel'
 
@@ -73,7 +73,7 @@ export default function JobDetail({ id, onClose }) {
           Back to the list
         </button>
         <div className="flex items-center gap-3">
-          <Monogram name={job.companyName} size="lg" />
+          <CompanyLogo companyId={job.companyId} name={job.companyName} size="lg" />
           <div>
             <p className="font-medium">{job.companyName}</p>
             {job.isNew && <p className="text-xs text-slate">New since yesterday</p>}
