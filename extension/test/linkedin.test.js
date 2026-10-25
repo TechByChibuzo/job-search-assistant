@@ -58,6 +58,24 @@ describe('reading a LinkedIn job', () => {
     })
   })
 
+  it('finds the location in LinkedIn\'s newer layout, without the old class names', () => {
+    const doc = page(`
+      <main>
+        <div class="t-24"><h1>Software Engineer, New Grad</h1></div>
+        <div class="xyz"><span>San Francisco, CA</span><span> · </span><span>Reposted 2 days ago</span><span> · </span><span>Over 100 people clicked apply</span></div>
+        <p>Promoted by hirer · Responses managed off LinkedIn</p>
+      </main>`, 'Software Engineer, New Grad | Nooks | LinkedIn')
+
+    const job = globalThis.JSA_LINKEDIN.job(doc, 'https://www.linkedin.com/jobs/search-results/?currentJobId=4446745306&eBP=x')
+
+    expect(job).toEqual({
+      title: 'Software Engineer, New Grad',
+      company: 'Nooks',
+      location: 'San Francisco, CA',
+      url: 'https://www.linkedin.com/jobs/view/4446745306/',
+    })
+  })
+
   it('falls back to the tab title', () => {
     const doc = page('', 'Backend Engineer | Plaid | LinkedIn')
 

@@ -73,13 +73,27 @@
       '.job-details-jobs-unified-top-card__primary-description-container, .job-details-jobs-unified-top-card__tertiary-description-container',
     )
     // "Seattle, WA · 1 week ago · Over 100 people clicked apply" → "Seattle, WA"
-    const location = text(description).split('·')[0].trim()
+    const location = (text(description) || metaLine(doc)).split('·')[0].trim()
     return {
       title,
       company,
       location,
       url: id ? `https://www.linkedin.com/jobs/view/${id}/` : url,
     }
+  }
+
+  /**
+   * The job's "place · when · how many" line, when LinkedIn's class names have changed: the shortest
+   * element whose text has that shape ("San Francisco, CA · Reposted 2 days ago · Over 100 people…").
+   */
+  function metaLine(doc) {
+    const shape = /^[^·]{2,80}\s·\s.*\b(ago|applicants?|people|clicked|reposted|posted)\b/i
+    let best = ''
+    for (const el of doc.querySelectorAll('main div, main span, main p, div, span, p')) {
+      const t = text(el)
+      if (t.length < 240 && shape.test(t) && (!best || t.length < best.length)) best = t
+    }
+    return best
   }
 
   globalThis.JSA_LINKEDIN = { profile, job, splitHeadline, profileUrl, jobId }
