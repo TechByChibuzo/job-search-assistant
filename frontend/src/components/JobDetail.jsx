@@ -1,10 +1,11 @@
 import { ArrowLeft, Check, Copy, ExternalLink } from 'lucide-react'
 import { useState } from 'react'
-import { useJob } from '../api/hooks'
+import { useJob, useSetJobClosed } from '../api/hooks'
 import { formatDate, timeAgo } from '../lib/dates'
 import { workplaceLabel } from '../lib/labels'
 import Description from './Description'
 import Monogram from './Monogram'
+import TrackPanel from './TrackPanel'
 
 function CopyLink({ url }) {
   const [copied, setCopied] = useState(false)
@@ -42,6 +43,7 @@ function DetailSkeleton() {
 
 export default function JobDetail({ id, onClose }) {
   const { data, isPending, error } = useJob(id)
+  const setClosed = useSetJobClosed()
 
   if (isPending) return <DetailSkeleton />
   if (error) return <p className="p-8 text-sm text-danger">{error.message}</p>
@@ -96,8 +98,21 @@ export default function JobDetail({ id, onClose }) {
             <ExternalLink className="size-4" aria-hidden />
           </a>
           <CopyLink url={job.url} />
+          {job.manual && (
+            <button
+              type="button"
+              onClick={() => setClosed.mutate({ id: job.id, closed: job.open })}
+              className="inline-flex h-10 items-center rounded-lg px-3 text-sm font-medium text-slate hover:text-ink"
+            >
+              {job.open ? 'Mark as closed' : 'Reopen'}
+            </button>
+          )}
         </div>
+        {job.manual && <p className="mt-3 text-xs text-faint">Added by hand. Syncs leave it alone; close it when the role is gone.</p>}
       </header>
+      <div className="border-b border-rule p-6 sm:p-8">
+        <TrackPanel job={job} />
+      </div>
       <div className="max-w-[70ch] p-6 text-[15px] leading-relaxed text-ink/90 sm:p-8">
         <Description text={description} />
       </div>

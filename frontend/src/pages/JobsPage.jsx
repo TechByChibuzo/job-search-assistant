@@ -1,12 +1,14 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Inbox } from 'lucide-react'
+import { Inbox, Link2 } from 'lucide-react'
 import { useJobs, useSummary } from '../api/hooks'
+import AddRoleDialog from '../components/AddRoleDialog'
 import Filters from '../components/Filters'
 import JobDetail from '../components/JobDetail'
 import JobList, { JobListSkeleton } from '../components/JobList'
 import TodayStrip from '../components/TodayStrip'
 import { useKeyboardNav } from '../lib/useKeyboardNav'
+import { secondaryButton } from '../lib/ui'
 
 /** Filters and the open role live in the URL, so a view can be bookmarked and Back works. */
 function readFilters(params) {
@@ -66,6 +68,7 @@ export default function JobsPage() {
   const selected = params.get('job') ? Number(params.get('job')) : null
   const jobs = useJobs(filters)
   const maxAgeDays = useSummary().data?.maxAgeDays
+  const [adding, setAdding] = useState(false)
 
   const all = useMemo(() => jobs.data?.pages.flatMap((p) => p.content) ?? [], [jobs.data])
   const ids = useMemo(() => all.map((j) => j.id), [all])
@@ -81,7 +84,13 @@ export default function JobsPage() {
     <div className="pt-6 lg:pt-10">
       <header className="flex flex-col gap-5">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Inbox</h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-3xl font-semibold tracking-tight">Inbox</h1>
+            <button type="button" onClick={() => setAdding(true)} className={secondaryButton}>
+              <Link2 className="size-4" aria-hidden />
+              Add a role by link
+            </button>
+          </div>
           <div className="mt-2">
             <TodayStrip
               activeCompanyId={filters.newOnly ? filters.companyId : null}
@@ -94,6 +103,7 @@ export default function JobsPage() {
         </div>
         <Filters filters={filters} onChange={setFilters} />
       </header>
+      <AddRoleDialog open={adding} onClose={() => setAdding(false)} onAdded={(id) => select(id)} />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <div className={selected ? 'hidden lg:block' : ''}>

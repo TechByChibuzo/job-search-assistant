@@ -9,6 +9,13 @@ import SearchChips from './SearchChips'
 import { useToast } from './Toasts'
 
 function StatusPill({ company, syncing }) {
+  if (company.ats === 'MANUAL') {
+    return (
+      <span className="inline-flex items-center rounded-full bg-sunken px-2.5 py-1 text-xs font-medium text-slate">
+        Roles added by link
+      </span>
+    )
+  }
   let tone = 'bg-sunken text-slate'
   let dot = 'bg-faint'
   let text = 'Not synced yet'
@@ -149,16 +156,20 @@ export default function CompanyRow({ company }) {
             {!company.active && <span className="text-xs font-medium text-slate">Paused</span>}
           </div>
           <p className="mt-1 text-sm text-slate">
-            <a
-              href={boardUrl(company.ats, company.board)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 hover:text-ink"
-            >
-              {sourceLabel(company.ats)}
-              {board && <span className="text-faint">/ {board}</span>}
-              <ExternalLink className="size-3" aria-hidden />
-            </a>
+            {company.ats === 'MANUAL' ? (
+              <span>No feed the app can read. Add its roles by link, or set up job alerts.</span>
+            ) : (
+              <a
+                href={boardUrl(company.ats, company.board)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 hover:text-ink"
+              >
+                {sourceLabel(company.ats)}
+                {board && <span className="text-faint">/ {board}</span>}
+                <ExternalLink className="size-3" aria-hidden />
+              </a>
+            )}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
             <SearchChips search={company.search} />
@@ -177,13 +188,15 @@ export default function CompanyRow({ company }) {
           {company.lastSyncStatus === 'FAILED' && <p className="mt-3 text-sm text-danger">{company.lastSyncError}</p>}
         </div>
         <div className="flex gap-0.5">
-          <IconButton
-            label="Sync now"
-            disabled={running}
-            onClick={() => sync.mutate(company.id, { onError: (e) => toast(e.message, { tone: 'error' }) })}
-          >
-            <RefreshCw className={`size-4 ${syncingThis ? 'motion-safe:animate-spin' : ''}`} />
-          </IconButton>
+          {company.ats !== 'MANUAL' && (
+            <IconButton
+              label="Sync now"
+              disabled={running}
+              onClick={() => sync.mutate(company.id, { onError: (e) => toast(e.message, { tone: 'error' }) })}
+            >
+              <RefreshCw className={`size-4 ${syncingThis ? 'motion-safe:animate-spin' : ''}`} />
+            </IconButton>
+          )}
           <IconButton
             label="Edit"
             onClick={() => {
@@ -193,13 +206,15 @@ export default function CompanyRow({ company }) {
           >
             <Pencil className="size-4" />
           </IconButton>
-          <IconButton
-            label={company.active ? 'Pause daily sync' : 'Resume daily sync'}
-            disabled={update.isPending}
-            onClick={() => update.mutate({ id: company.id, active: !company.active })}
-          >
-            {company.active ? <Pause className="size-4" /> : <Play className="size-4" />}
-          </IconButton>
+          {company.ats !== 'MANUAL' && (
+            <IconButton
+              label={company.active ? 'Pause daily sync' : 'Resume daily sync'}
+              disabled={update.isPending}
+              onClick={() => update.mutate({ id: company.id, active: !company.active })}
+            >
+              {company.active ? <Pause className="size-4" /> : <Play className="size-4" />}
+            </IconButton>
+          )}
           <IconButton label="Remove" danger disabled={remove.isPending} onClick={confirmRemove}>
             <Trash2 className="size-4" />
           </IconButton>

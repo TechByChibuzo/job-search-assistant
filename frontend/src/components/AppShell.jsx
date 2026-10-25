@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
-import { Building2, Inbox, Monitor, Moon, Sun } from 'lucide-react'
-import { useCompanies, useSummary } from '../api/hooks'
+import { Building2, Inbox, KanbanSquare, Monitor, Moon, Sun, Users } from 'lucide-react'
+import { useCompanies, useContacts, useDue, useSummary } from '../api/hooks'
 import { useTheme } from '../lib/theme'
 import SyncPanel from './SyncPanel'
 
@@ -17,7 +17,7 @@ function Brand({ className = '' }) {
   )
 }
 
-function RailLink({ to, icon: Icon, label, count }) {
+function RailLink({ to, icon: Icon, label, count, alert = false }) {
   return (
     <NavLink
       to={to}
@@ -29,7 +29,14 @@ function RailLink({ to, icon: Icon, label, count }) {
     >
       <Icon className="size-4" aria-hidden />
       <span className="flex-1">{label}</span>
-      {count > 0 && <span className="text-xs text-rail-dim">{count.toLocaleString()}</span>}
+      {count > 0 &&
+        (alert ? (
+          <span className="rounded-full bg-highlight px-1.5 text-xs font-semibold text-highlight-ink" aria-label={`${count} due`}>
+            {count}
+          </span>
+        ) : (
+          <span className="text-xs text-rail-dim">{count.toLocaleString()}</span>
+        ))}
     </NavLink>
   )
 }
@@ -80,6 +87,8 @@ function MobileTab({ to, children }) {
 export default function AppShell({ children }) {
   const summary = useSummary()
   const companies = useCompanies()
+  const due = useDue()
+  const people = useContacts()
 
   return (
     <div className="min-h-dvh lg:pl-64">
@@ -87,6 +96,8 @@ export default function AppShell({ children }) {
         <Brand className="px-2 pt-1 text-[15px]" />
         <nav className="mt-8 flex flex-col gap-1" aria-label="Main">
           <RailLink to="/jobs" icon={Inbox} label="Inbox" count={summary.data?.newJobs ?? 0} />
+          <RailLink to="/tracker" icon={KanbanSquare} label="Tracker" count={due.data?.length ?? 0} alert />
+          <RailLink to="/people" icon={Users} label="People" count={people.data?.length ?? 0} />
           <RailLink to="/companies" icon={Building2} label="Companies" count={companies.data?.length ?? 0} />
         </nav>
         <div className="mt-auto flex flex-col gap-3">
@@ -105,8 +116,12 @@ export default function AppShell({ children }) {
             <SyncPanel compact />
           </div>
         </div>
-        <nav className="flex gap-1 px-3 pb-2" aria-label="Main">
+        <nav className="scroll-quiet flex gap-1 overflow-x-auto px-3 pb-2" aria-label="Main">
           <MobileTab to="/jobs">Inbox</MobileTab>
+          <MobileTab to="/tracker">
+            Tracker{due.data?.length > 0 && <span className="ml-1.5 rounded-full bg-highlight px-1.5 text-xs text-highlight-ink">{due.data.length}</span>}
+          </MobileTab>
+          <MobileTab to="/people">People</MobileTab>
           <MobileTab to="/companies">Companies</MobileTab>
         </nav>
       </header>

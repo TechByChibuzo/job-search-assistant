@@ -92,3 +92,62 @@ export function useStartSync() {
     onSuccess: (progress) => client.setQueryData(['sync'], progress),
   })
 }
+
+// Tracker
+
+/** Everything the tracker changes shows up in several places, so each change refreshes them all. */
+function useRefreshTracker() {
+  const client = useQueryClient()
+  return () =>
+    ['pursuits', 'tracking', 'due', 'contacts', 'outreach', 'jobs', 'job', 'companies', 'summary'].forEach((key) =>
+      client.invalidateQueries({ queryKey: [key] }),
+    )
+}
+
+export function usePursuits() {
+  return useQuery({ queryKey: ['pursuits'], queryFn: () => api('/pursuits') })
+}
+
+export function useTracking(jobId) {
+  return useQuery({ queryKey: ['tracking', jobId], queryFn: () => api(`/jobs/${jobId}/tracking`), enabled: jobId != null })
+}
+
+export function useDue() {
+  return useQuery({ queryKey: ['due'], queryFn: () => api('/outreach/due'), refetchInterval: 300_000 })
+}
+
+export function useContacts(companyId) {
+  return useQuery({
+    queryKey: ['contacts', companyId ?? 'all'],
+    queryFn: () => api(`/contacts${toQuery({ companyId })}`),
+  })
+}
+
+export function useContactOutreach(contactId) {
+  return useQuery({
+    queryKey: ['outreach', 'contact', contactId],
+    queryFn: () => api(`/contacts/${contactId}/outreach`),
+    enabled: contactId != null,
+  })
+}
+
+function useTrackerMutation(fn) {
+  const refresh = useRefreshTracker()
+  return useMutation({ mutationFn: fn, onSuccess: refresh })
+}
+
+export const useTrack = () => useTrackerMutation((jobId) => api('/pursuits', { method: 'POST', body: { jobId } }))
+export const useUpdatePursuit = () =>
+  useTrackerMutation(({ id, ...body }) => api(`/pursuits/${id}`, { method: 'PATCH', body }))
+export const useUntrack = () => useTrackerMutation((id) => api(`/pursuits/${id}`, { method: 'DELETE' }))
+export const useLogOutreach = () => useTrackerMutation((body) => api('/outreach', { method: 'POST', body }))
+export const useRecordEvent = () =>
+  useTrackerMutation(({ id, ...body }) => api(`/outreach/${id}/events`, { method: 'POST', body }))
+export const useDeleteOutreach = () => useTrackerMutation((id) => api(`/outreach/${id}`, { method: 'DELETE' }))
+export const useCreateContact = () => useTrackerMutation((body) => api('/contacts', { method: 'POST', body }))
+export const useUpdateContact = () =>
+  useTrackerMutation(({ id, ...body }) => api(`/contacts/${id}`, { method: 'PATCH', body }))
+export const useDeleteContact = () => useTrackerMutation((id) => api(`/contacts/${id}`, { method: 'DELETE' }))
+export const useAddJob = () => useTrackerMutation((body) => api('/jobs', { method: 'POST', body }))
+export const useSetJobClosed = () =>
+  useTrackerMutation(({ id, closed }) => api(`/jobs/${id}`, { method: 'PATCH', body: { closed } }))
