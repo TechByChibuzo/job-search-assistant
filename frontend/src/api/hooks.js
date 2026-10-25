@@ -38,7 +38,7 @@ export function useDetect(careersUrl) {
 /** Anything that changes companies or jobs refreshes every list built from them. */
 function useRefresh() {
   const client = useQueryClient()
-  return () => ['companies', 'jobs', 'summary', 'job'].forEach((key) => client.invalidateQueries({ queryKey: [key] }))
+  return () => ['companies', 'jobs', 'summary', 'job', 'gmail'].forEach((key) => client.invalidateQueries({ queryKey: [key] }))
 }
 
 export function useCreateCompany() {
@@ -151,3 +151,25 @@ export const useDeleteContact = () => useTrackerMutation((id) => api(`/contacts/
 export const useAddJob = () => useTrackerMutation((body) => api('/jobs', { method: 'POST', body }))
 export const useSetJobClosed = () =>
   useTrackerMutation(({ id, closed }) => api(`/jobs/${id}`, { method: 'PATCH', body: { closed } }))
+
+// Job-alert emails
+
+export function useGmail() {
+  return useQuery({ queryKey: ['gmail'], queryFn: () => api('/gmail') })
+}
+
+export function useGmailImport() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: () => api('/gmail/import', { method: 'POST' }),
+    onSuccess: (progress) => client.setQueryData(['sync'], progress),
+  })
+}
+
+export function useGmailDisconnect() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: () => api('/gmail', { method: 'DELETE' }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['gmail'] }),
+  })
+}
