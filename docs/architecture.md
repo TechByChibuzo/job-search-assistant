@@ -222,6 +222,7 @@ erDiagram
         text board
         text careers_url
         text search "comma-separated phrases"
+        text domain "its own website, for the logo"
         boolean active
         timestamptz last_synced_at
         text last_sync_status "OK | BOARD_NOT_FOUND | FAILED"
@@ -387,6 +388,7 @@ flowchart LR
 |---|---|
 | Security | One user on localhost. The API binds to `127.0.0.1` and has no login. The web app reaches it through the same origin (Vite proxy in development, nginx in Docker). Because a page on another site could still make the browser send a plain POST to localhost, every request that changes data must carry an `X-Requested-With` header the app adds; another site can only add it after a CORS preflight, which the API refuses for any origin but its own (CSRF protection without sessions). nginx sends a Content Security Policy and the usual hardening headers. Hosting it means adding auth first: see section 12. |
 | Personal data | The resume and answer bank live in `private/`, which git ignores. Nothing personal is committed. |
+| Third parties | Company logos are fetched once by the API (Google's favicon service, DuckDuckGo's as a fallback), stored in `company_logo`, and served by the app, so the browser never tells a third party which companies the owner looks at, and the Content Security Policy stays `img-src 'self'`. The services are asked *about* a domain and never sent to it, so an edited domain can't make the app request an internal address. A company's website is taken from its job links, a short list of known names, or a guess from its name that must return a real icon; the owner can correct it. |
 | Errors | One `@RestControllerAdvice` returns RFC 7807 problem details. Sync failures are stored per company, not thrown at the scheduler. |
 | Politeness | A descriptive `User-Agent`, timeouts, a delay between pages, a page cap, and one sync a day. No source that needs a login, token or bot check is read. |
 | Testing | Unit tests for detection, region rules, paging and every source against recorded real responses; integration tests of the sync and the REST API against real Postgres via Testcontainers; component tests for the UI. CI runs them all. |
