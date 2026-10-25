@@ -68,7 +68,7 @@ The API is the only thing that talks to the outside world, and it only reads fro
 | Postgres 16 | Docker Compose | All state |
 | Browser extension | Chrome MV3, unpacked | Save a viewed profile; fill application forms (phase 4) |
 
-The backend is organised **by feature** rather than by layer (`company`, `job`, `job.source`, `contact`, `tracker`, `alerts`), so each feature's entity, repository, service and controller sit together. See [ADR 0002](adr/0002-package-by-feature.md).
+The backend is organised **by feature** rather than by layer (`company`, `job`, `job.source`, `contact`, `tracker`, `alerts`, `ai`), so each feature's entity, repository, service and controller sit together. See [ADR 0002](adr/0002-package-by-feature.md).
 
 ## 5. Job ingestion
 
@@ -343,16 +343,38 @@ sequenceDiagram
 - **One parser per kind of email** (`AlertParser`), chosen by sender: LinkedIn's alert cards (title link plus a "Company · Location" line), and a fallback for companies' own careers alerts that picks out links shaped like a single job posting and names the company from the sender. Links lose their tracking parameters, so the same role from two emails matches. Parsers are pure functions, tested against sample emails.
 - **Same rules.** Roles outside the US are skipped; roles already saved aren't added twice. Alert roles are saved as hand-added roles (`manual`), with the email's date as the listing date.
 - **Gaps are visible.** Emails in which no parser finds a role are counted and shown on the Companies page, so a new alert format doesn't fail silently.
-- **Part of the sync.** The importer is an `ExtraFeed`, an interface in the job package that the sync runner calls after the companies; the job feature doesn't depend on the email code. "Import now" runs it alone through the same background runner.
+- **Part of the sync.** The importer is a `SyncStep`, an interface in the job package that the sync runner calls after the companies (match scoring is another); the job feature doesn't depend on the email code. "Import now" runs it alone through the same background runner.
 
 The sample emails in the tests are modelled on the known layout of these alerts. Real alerts, trimmed of personal details, should replace them as they arrive.
 
-## 9. AI (phase 4)
+## 9. AI: match scores and drafted messages
 
-- **Filter before calling AI.** Keyword, location, workplace and seniority filters run in SQL first; only the shortlist (about 30 jobs a day) is scored.
-- **Match:** the model gets the resume and a job description and returns a score with reasons, stored with the job so it is paid for once.
-- **Drafting:** referral messages, follow-ups and cover letters are drafted from the resume, the role and a real connection point. The prompt forbids claiming experience that is not in the resume, and the owner edits before anything is used.
-- **Provider behind an interface:** a small hosted model (a few dollars a month) or a local model through Ollama ($0, resume stays on the machine). See [ADR 0003](adr/0003-ai-provider-abstraction.md).
+Claude reads the owner's resume against each role and drafts outreach. Everything it writes is for the owner to read or edit; nothing is sent.
+
+```mermaid
+flowchart LR
+    R[(private/resume.pdf)] --> S[ResumeStore]
+    J[(job)] --> M[MatchService]
+    S --> M
+    M -->|system prompt + resume, cached + posting| C[Claude interface]
+    C -->|JSON: score, summary, strengths, gaps| M
+    M --> J
+    S --> D[DraftService]
+    P[(contact)] --> D
+    J --> D
+    D --> C
+    C -->|JSON: message, subject| D
+    D --> UI[Owner edits and sends]
+```
+
+- **The resume** is read from `private/` (git-ignored; mounted read-only in Docker). The newest PDF, Markdown or text file is used, so updating it is dropping in a new file. A PDF is sent to Claude as a document; there is no local parsing to get wrong.
+- **Match score:** one request per role returns a 0 to 100 score with a calibrated rubric, a one-sentence summary, up to three strengths tied to the resume and up to three gaps. It is stored on the role (`job.match_*`), so each role is paid for once. The inbox can sort by best fit; unscored roles sort last. Scoring runs on demand ("Check my fit") and as a `SyncStep` after the daily sync, for up to `AI_DAILY_LIMIT` (30) roles that are new since yesterday: the daily cost has a ceiling.
+- **Drafts:** a LinkedIn connection note (LinkedIn allows 300 characters; the prompt asks for 280), a message, or a follow-up that refers to the earlier message. The prompt allows only facts from the resume, names the exact role, uses one true connection point (the shared school for alumni) and makes one easy ask. Drafts are returned, not stored; the text the owner actually sends is what gets recorded on the conversation.
+- **Structured output.** Both requests ask for JSON matching a schema (`output_config.format`), so answers are parsed, not scraped from prose. Scores are clamped to 0 to 100 regardless.
+- **Prompt injection.** Job postings come from the open web. They are wrapped in `<job_posting>` tags and the system prompt says to treat them as information, never instructions; the output is a schema-constrained JSON object the app reads field by field, so a hostile posting can at worst skew its own score.
+- **Refusals and failures.** Requests opt into server-side fallbacks (`fallbacks: "default"`), and a remaining refusal, a bad key, rate limiting or an outage becomes a plain message in the interface (HTTP 503 with the reason), never a silent failure. The daily step counts failures and carries on.
+- **Cost control.** The system prompt and resume come first with a one-hour cache breakpoint, so a batch of scores reuses that prefix. Scoring uses low effort; drafting medium. The model is `AI_MODEL` (default Claude Opus 5.5); a smaller model such as Claude Haiku 5.5 cuts the cost by roughly 40 times at some loss of judgement.
+- **Behind an interface.** `Claude` is an interface with one implementation using the official Java SDK, so tests run against a fake and a local stub of the Messages API, never the real one. See [ADR 0003](adr/0003-ai-provider-abstraction.md).
 
 ## 10. Browser extension (phase 5)
 
@@ -385,7 +407,7 @@ Today the app runs on one machine. It is built so that hosting it later is a con
 **To do before hosting it**
 1. **Authentication.** Spring Security with one sign-in method (a passkey or an OAuth provider), and the API bound to all interfaces only behind TLS.
 2. **Sync state in the database.** The run state and the one-run-at-a-time lock are in memory, which is right for one instance. More than one instance needs a database lock (ShedLock) and a sync-run table.
-3. **Secrets and personal data.** The database password, the Google client secret and any AI key from a secret store; the Gmail refresh token encrypted at rest (it is read-only, but still access to the owner's mail); the resume in encrypted storage rather than `private/`.
+3. **Secrets and personal data.** The database password, the Google client secret and the Anthropic API key from a secret store; the Gmail refresh token encrypted at rest (it is read-only, but still access to the owner's mail); the resume in encrypted storage rather than `private/`.
 4. **Multi-user, if ever.** A `user_id` on companies and everything below them. Nothing in the domain model assumes a single user beyond the missing column.
 
 ## 13. Roadmap
@@ -396,6 +418,6 @@ Today the app runs on one machine. It is built so that hosting it later is a con
 | 1.5 | Workday, Avature, Amazon, Google and Goldman Sachs sources; US-only and age rules; search phrases; background sync with progress; redesigned UI | Done |
 | 2 | Tracker: roles by stage, people, conversations with follow-up reminders, paste-a-job-link | Done |
 | 3 | Job-alert email import from a silent Gmail label (Microsoft, Meta, Apple, LinkedIn-only roles) | Done; parsers to be tuned on real alerts |
-| 4 | AI match scoring and message drafting | Planned |
+| 4 | AI match scores, best-fit sort, drafted connection notes, messages and follow-ups | Done |
 | 5 | Browser extension: save profile, fill applications | Planned |
 | 6 | Tailored resumes and cover letters, answer bank, reply-rate stats | Planned |

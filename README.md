@@ -14,6 +14,7 @@ Then it keeps track of the referral hunt itself: the roles I'm pursuing, the peo
 - **An inbox ordered by freshness.** Roles are grouped by the day they were posted, new ones are highlighted, and a digest at the top shows which companies posted today. You can filter by keyword, location, company and remote / hybrid / on-site, and move through roles with j and k.
 - **A tracker for the referral hunt.** Track a role and record each message you send; the app reminds you to follow up after 5 days of silence and moves the role along as people reply and refer you (Saved → Reaching out → Referred → Applied → Interviewing → Offer). A People page keeps everyone you've talked to and where each conversation stands.
 - **Roles from anywhere.** Paste a link from LinkedIn or any careers site to add a role the app can't sync. If the link is on a board it can read, it offers to track the whole company.
+- **Your fit, at a glance.** Claude reads each new role against your resume and scores it from 0 to 100, with what matches and what's missing; the inbox can sort by best fit. It also drafts LinkedIn connection notes, messages and follow-ups from facts on your resume, for you to edit and send.
 - **Job-alert emails, silently.** For sites that can't be read (Microsoft, Meta, Apple) and LinkedIn-only roles, the app reads job-alert emails from a Gmail label each morning, read-only, and adds their roles to the inbox. A Gmail filter keeps the alerts out of your inbox, so they never buzz. [Setup guide](docs/gmail-setup.md).
 
 On a real run it kept about 1,460 relevant US roles from eight companies, including 654 software roles from Amazon, 305 from Google, 138 from Nvidia and 161 from Bloomberg.
@@ -31,7 +32,6 @@ On a real run it kept about 1,460 relevant US roles from eight companies, includ
 
 | Phase | Scope |
 |---|---|
-| 4 | AI ranking of the shortlist against my resume, and drafted referral messages I review and send |
 | 5 | Browser extension: save the profile I'm viewing; fill application forms (I always press submit) |
 | 6 | Tailored resumes and cover letters, a reusable answer bank, reply-rate stats |
 
@@ -44,9 +44,9 @@ flowchart LR
     api -->|daily, read-only, paced| feeds[Greenhouse, Lever, Ashby APIs<br/>Workday, Avature, amazon.jobs,<br/>Google Careers, Goldman Sachs]
 ```
 
-- **Backend:** Java 21, Spring Boot 3.5, Spring Data JPA, Flyway, `RestClient`, jsoup, the Gmail API with Google OAuth. Organised by feature (`company`, `job`, `job.source`, `contact`, `tracker`, `alerts`). Each site is one class behind a `JobSource` interface.
+- **Backend:** Java 21, Spring Boot 3.5, Spring Data JPA, Flyway, `RestClient`, jsoup, the Gmail API with Google OAuth, and Claude through the Anthropic Java SDK. Organised by feature (`company`, `job`, `job.source`, `contact`, `tracker`, `alerts`, `ai`). Each site is one class behind a `JobSource` interface.
 - **Frontend:** React 19, Vite, Tailwind CSS 4, TanStack Query, lucide icons. Filters and the open role live in the URL, so any view can be bookmarked. Light and dark themes.
-- **Tests:** 227 in total. Every site source is tested against a trimmed copy of a real response, and the alert parsers against sample emails; the sync and the REST API run against real Postgres via Testcontainers; UI components are tested with Vitest and Testing Library. CI runs everything on every push.
+- **Tests:** 248 in total. Every site source is tested against a trimmed copy of a real response, and the alert parsers against sample emails; the sync and the REST API run against real Postgres via Testcontainers; UI components are tested with Vitest and Testing Library. CI runs everything on every push.
 
 The full design, with diagrams of the sync, the data model, the deployment path and the roadmap, is in [docs/architecture.md](docs/architecture.md). The decisions with real trade-offs are in [docs/adr](docs/adr).
 
@@ -56,6 +56,7 @@ The full design, with diagrams of the sync, the data model, the deployment path 
 - **Coverage-aware closing.** Search feeds stop paging at the 30-day cutoff, so a role missing from them may still be open. Each fetch reports how far back it is complete, and the sync only closes roles inside that window.
 - **"New" means new to you.** Adding a company doesn't flood the inbox: roles seen on its first import count as new only if they were posted in the last day.
 - **Conservative US detection.** Locations are free text ("US, CA, Santa Clara", "Remote - US", "Toronto"). Structured country fields are used where a feed has them; otherwise the rules answer "unknown" rather than guess, so a US role is never dropped by mistake.
+- **AI with guard rails.** Claude answers in JSON matching a schema, job postings are fenced off as untrusted data, drafts may only use facts from the resume, refusals fall back server-side, and the daily scoring run has a hard cap. Tests never call the API: a fake covers the features and a local stub of the Messages API checks the exact request the SDK sends.
 - **State rules in the domain.** A conversation's moves (sent, followed up, replied, referred) and a role's stages live in the entities and are unit-tested without a database. Follow-up reminders are a date on the conversation and a query, not a background job.
 - **Respectful by default.** One sync a day, paced pages, a page cap, an honest `User-Agent`, and no reading of sites that require a login, token or bot check ([ADR 0004](docs/adr/0004-unofficial-feeds.md)).
 - **Local today, deployable by design.** Configuration from the environment, containers with health probes, Flyway migrations, a background sync instead of long requests, and a same-origin nginx front end with security headers. Hosting it is a short checklist, starting with authentication ([ADR 0005](docs/adr/0005-deployable-by-design.md)).
@@ -93,13 +94,16 @@ cd frontend && npm test && npm run lint
 | `FOLLOW_UP_AFTER` | `5d` | When to remind you to follow up on a message with no reply |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | none | A Google OAuth client for reading job-alert emails ([setup](docs/gmail-setup.md)); put them in `.env` |
 | `GMAIL_LABEL` | `Job alerts` | The Gmail label alert emails are filed under |
+| `ANTHROPIC_API_KEY` | none | Claude, for match scores and drafts; put it in `.env` |
+| `AI_MODEL` | `claude-opus-5-5` | Which Claude model to use |
+| `AI_DAILY_LIMIT` | `30` | New roles scored automatically after each daily sync |
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | local Postgres | Database |
 
 ### API
 
 | Method | Path | |
 |---|---|---|
-| `GET` | `/api/jobs?q=&location=&companyId=&workplace=REMOTE&newOnly=&includeOlder=&includeClosed=&page=&size=` | Search open roles, most recently posted first |
+| `GET` | `/api/jobs?q=&location=&companyId=&workplace=REMOTE&newOnly=&sort=fit&includeOlder=&includeClosed=&page=&size=` | Search open roles, most recently posted first |
 | `GET` | `/api/jobs/summary` | New roles since yesterday, by company |
 | `GET` | `/api/jobs/{id}` | One role with its description |
 | `GET` `POST` | `/api/companies` | List or add companies (`{"careersUrl": "...", "search": "software engineer"}`) |
@@ -116,5 +120,8 @@ cd frontend && npm test && npm run lint
 | `GET` `DELETE` | `/api/gmail` | Gmail connection and last import; disconnect (revokes access) |
 | `GET` | `/api/gmail/connect`, `/api/gmail/callback` | Google sign-in, read-only |
 | `POST` | `/api/gmail/import` | Read new job-alert emails now (202) |
+| `GET` | `/api/ai` | Whether Claude is set up, and which resume it reads |
+| `POST` | `/api/jobs/{id}/match` | Score one role against the resume |
+| `POST` | `/api/drafts` | Draft a connection note, message or follow-up |
 
 Errors are RFC 7807 problem details.
