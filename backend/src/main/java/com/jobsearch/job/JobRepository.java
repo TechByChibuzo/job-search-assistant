@@ -19,6 +19,15 @@ interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecut
 
     Optional<Job> findFirstByUrl(String url);
 
+    /** Roles whose own id appears in a page's link: an application page usually carries the posting's id. */
+    @EntityGraph(attributePaths = "company")
+    @Query("""
+            select j from Job j
+            where length(j.externalId) >= 6 and j.externalId not like 'manual:%' and j.externalId not like 'alert:%'
+              and locate(lower(j.externalId), lower(:url)) > 0
+            order by j.lastSeenAt desc""")
+    List<Job> findByIdInLink(String url, Limit limit);
+
     @Query("select j.url from Job j where j.company.id = :companyId order by j.id desc")
     List<String> findUrlsByCompany(long companyId, Limit limit);
 

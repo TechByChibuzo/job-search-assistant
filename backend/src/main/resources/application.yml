@@ -38,7 +38,8 @@ management:
 
 app:
   cors:
-    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+    # The dev server, and the browser extension (its id is pinned by the key in extension/manifest.json)
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173,chrome-extension://ohabbfmnmocehoafnooeknchjhanfomk}
   sync:
     enabled: ${SYNC_ENABLED:true}
     # Daily at 07:00 in the server's time zone (set TZ in docker-compose.yml)

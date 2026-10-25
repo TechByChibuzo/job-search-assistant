@@ -21,6 +21,7 @@ import com.jobsearch.contact.Contact;
 import com.jobsearch.contact.ContactService;
 import com.jobsearch.job.Job;
 import com.jobsearch.job.JobLookup;
+import com.jobsearch.job.ManualJobService;
 import com.jobsearch.tracker.TrackerDtos.OutreachView;
 import com.jobsearch.tracker.TrackerDtos.PursuitView;
 import com.jobsearch.tracker.TrackerDtos.RoleRef;
@@ -37,15 +38,17 @@ public class TrackerService {
     private final PursuitRepository pursuits;
     private final OutreachRepository outreach;
     private final JobLookup jobs;
+    private final ManualJobService manualJobs;
     private final ContactService contacts;
     private final Clock clock;
     private final int followUpDays;
 
-    TrackerService(PursuitRepository pursuits, OutreachRepository outreach, JobLookup jobs, ContactService contacts,
-            Clock clock, AppProperties properties) {
+    TrackerService(PursuitRepository pursuits, OutreachRepository outreach, JobLookup jobs, ManualJobService manualJobs,
+            ContactService contacts, Clock clock, AppProperties properties) {
         this.pursuits = pursuits;
         this.outreach = outreach;
         this.jobs = jobs;
+        this.manualJobs = manualJobs;
         this.contacts = contacts;
         this.clock = clock;
         this.followUpDays = (int) properties.tracker().followUpAfter().toDays();
@@ -154,6 +157,27 @@ public class TrackerService {
             });
         }
         return OutreachView.of(o, today(), true);
+    }
+
+    /**
+     * The owner submitted an application on {@code pageUrl}. Finds the role (or saves it as a hand-added
+     * one), tracks it, and moves it to "applied" with today's date and the resume used.
+     */
+    @Transactional
+    public PursuitView recordApplication(String pageUrl, String title, String company, String resumeVersion) {
+        Job job = jobs.findForApplicationPage(pageUrl).orElseGet(() -> {
+            if (title == null || title.isBlank() || company == null || company.isBlank()) {
+                throw new BadRequestException("This page isn't a role the app knows. Say its title and company to save it.");
+            }
+            return manualJobs.add(pageUrl, title, company, null, null).job();
+        });
+        Instant now = clock.instant();
+        Pursuit p = pursuitFor(job, now);
+        p.setStage(PursuitStage.APPLIED, today(), now);
+        if (resumeVersion != null && !resumeVersion.isBlank()) {
+            p.update(p.getAppliedOn(), resumeVersion.strip(), p.getNotes(), now);
+        }
+        return view(p, outreach.findByJobIdOrderByFirstSentAtAsc(job.getId()));
     }
 
     @Transactional

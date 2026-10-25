@@ -101,5 +101,12 @@ final class TrackerDtos {
             @Size(max = 10000) String message,
             LocalDate sentOn) {}
 
+    /** The extension, after the owner submitted an application on {@code url}. */
+    record ApplicationRequest(
+            @NotNull @Size(max = 2000) String url,
+            @Size(max = 300) String title,
+            @Size(max = 200) String company,
+            @Size(max = 200) String resumeVersion) {}
+
     record RecordEventRequest(@NotNull OutreachEventType type, @Size(max = 5000) String note) {}
 }

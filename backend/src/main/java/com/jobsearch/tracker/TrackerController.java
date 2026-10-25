@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.jobsearch.tracker.TrackerDtos.ApplicationRequest;
 import com.jobsearch.tracker.TrackerDtos.LogOutreachRequest;
 import com.jobsearch.tracker.TrackerDtos.OutreachView;
 import com.jobsearch.tracker.TrackerDtos.PursuitView;
@@ -75,6 +76,12 @@ class TrackerController {
     @ResponseStatus(HttpStatus.CREATED)
     OutreachView log(@Valid @RequestBody LogOutreachRequest r) {
         return tracker.log(r.contactId(), r.jobId(), r.channel(), r.message(), r.sentOn());
+    }
+
+    @PostMapping("/api/applications")
+    @ResponseStatus(HttpStatus.CREATED)
+    PursuitView recordApplication(@Valid @RequestBody ApplicationRequest r) {
+        return tracker.recordApplication(r.url(), r.title(), r.company(), r.resumeVersion());
     }
 
     @PostMapping("/api/outreach/{id}/events")
