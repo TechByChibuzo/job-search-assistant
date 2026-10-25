@@ -5,6 +5,7 @@ import { useDeleteDocument, useDocument, useEditDocument } from '../api/hooks'
 import { useToast } from '../components/Toasts'
 import { formatDate } from '../lib/dates'
 import { primaryButton, secondaryButton } from '../lib/ui'
+import 'computer-modern/cmu-serif.css'
 
 /*
  * The paper is white in both themes, so marks on it use fixed light colours rather than the theme's tokens,
@@ -40,67 +41,133 @@ function Editable({ editing, value, onChange, rows = 2, className = '' }) {
   )
 }
 
+/** "**Kubernetes** clusters" → Kubernetes in bold, as the resume marks key terms. */
+function Rich({ text }) {
+  return String(text ?? '')
+    .split(/\*\*(.+?)\*\*/g)
+    .map((part, i) => (i % 2 ? <b key={i}>{part}</b> : part))
+}
+
+/** A contact item becomes a link when it is one: an email address, or a site such as github.com/name. */
+function contactHref(item) {
+  if (/^\S+@\S+\.\S+$/.test(item)) return `mailto:${item}`
+  if (/^(https?:\/\/)?[\w-]+(\.[\w-]+)+\/\S*$/.test(item)) return item.startsWith('http') ? item : `https://${item}`
+  return null
+}
+
+/**
+ * Older tailored resumes were saved in a simpler shape (a contact line, a summary, a flat skills list); they're
+ * read into the current one so they still open.
+ */
+function normalize(doc) {
+  const sections = (doc.sections ?? []).map((s) => ({
+    ...s,
+    skillGroups: s.skillGroups ?? [],
+    entries: (s.entries ?? []).map((e) => ({ ...e, titleRight: e.titleRight ?? e.dates ?? '' })),
+  }))
+  if (doc.skills?.length) sections.push({ heading: 'Skills', entries: [], skillGroups: [{ label: '', items: doc.skills }] })
+  return {
+    ...doc,
+    contact: doc.contact ?? (doc.contactLine ? doc.contactLine.split('|').map((x) => x.trim()) : []),
+    sections,
+  }
+}
+
+/** Jake's resume template, the owner's layout: what LaTeX sets, in CSS (see .jake in index.css). */
 function Resume({ doc, editing, update }) {
-  const c = doc
+  const c = normalize(doc)
   return (
-    <>
-      <header className="border-b border-black/15 pb-3 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">{c.name}</h1>
-        <p className="mt-1 text-[12px] text-black/70">{c.contactLine}</p>
-      </header>
-      {(c.summary || editing) && (
-        <p className="mt-3 text-[13px] leading-snug">
-          <Editable editing={editing} value={c.summary} onChange={(v) => update((d) => (d.summary = v))} />
+    <div className="jake">
+      <header className="jake-head">
+        <h1>{c.name}</h1>
+        <p>
+          {c.contact.map((item, i) => {
+            const href = contactHref(item)
+            return (
+              <span key={i}>
+                {i > 0 && ' | '}
+                {href ? <a href={href}>{item}</a> : item}
+              </span>
+            )
+          })}
         </p>
-      )}
-      {c.sections?.map((section, si) => (
-        <section key={si} className="mt-4">
-          <h2 className="border-b border-black/15 pb-0.5 text-[12px] font-bold tracking-wide uppercase">{section.heading}</h2>
-          {section.entries?.map((entry, ei) => (
-            <div key={ei} className="mt-2 break-inside-avoid">
-              <div className="flex items-baseline justify-between gap-4 text-[13px]">
+      </header>
+      {c.summary && <p className="jake-summary">{c.summary}</p>}
+      {c.sections.map((section, si) => (
+        <section key={si}>
+          <h2>{section.heading}</h2>
+          {section.entries.map((entry, ei) => (
+            <div key={ei} className="jake-entry">
+              <div className="jake-row">
                 <span>
-                  <span className="font-semibold">{entry.title}</span>
-                  {entry.subtitle && <span className="text-black/75">, {entry.subtitle}</span>}
+                  <b>{entry.title}</b>
+                  {entry.detail && (
+                    <>
+                      {' | '}
+                      <i>{entry.detail}</i>
+                    </>
+                  )}
                 </span>
-                <span className="shrink-0 text-[12px] text-black/65">{entry.dates}</span>
+                <span>{entry.titleRight}</span>
               </div>
-              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-[13px] leading-snug">
-                {entry.bullets?.map((b, bi) => (
-                  <li key={bi} className={b.problems?.length ? FLAGGED : undefined}>
-                    <Editable editing={editing} value={b.text} onChange={(v) => update((d) => (d.sections[si].entries[ei].bullets[bi].text = v))} />
-                    <Problems problems={b.problems}>
-                      {!editing && (
-                        <button
-                          type="button"
-                          onClick={() => update((d) => d.sections[si].entries[ei].bullets.splice(bi, 1), true)}
-                          className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[11px] font-medium text-black/60 hover:bg-black/5 hover:text-[#b42318]"
-                        >
-                          <X className="size-3" aria-hidden />
-                          Remove this line
-                        </button>
+              {(entry.subtitle || entry.subtitleRight) && (
+                <div className="jake-row jake-sub">
+                  <i>{entry.subtitle}</i>
+                  <i>{entry.subtitleRight}</i>
+                </div>
+              )}
+              <Problems problems={entry.problems} />
+              {entry.bullets?.length > 0 && (
+                <ul>
+                  {entry.bullets.map((b, bi) => (
+                    <li key={bi} className={b.problems?.length ? FLAGGED : undefined}>
+                      {editing ? (
+                        <Editable
+                          editing
+                          value={b.text}
+                          onChange={(v) => update((d) => (d.sections[si].entries[ei].bullets[bi].text = v))}
+                        />
+                      ) : (
+                        <Rich text={b.text} />
                       )}
-                    </Problems>
-                  </li>
-                ))}
-              </ul>
+                      <Problems problems={b.problems}>
+                        {!editing && (
+                          <button
+                            type="button"
+                            onClick={() => update((d) => d.sections[si].entries[ei].bullets.splice(bi, 1), true)}
+                            className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[11px] font-medium text-black/60 hover:bg-black/5 hover:text-[#b42318]"
+                          >
+                            <X className="size-3" aria-hidden />
+                            Remove this line
+                          </button>
+                        )}
+                      </Problems>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           ))}
+          {section.skillGroups.length > 0 && (
+            <div className="jake-skills">
+              {section.skillGroups.map((g, gi) => (
+                <p key={gi}>
+                  {g.label && <b>{g.label}</b>}
+                  {g.label && ': '}
+                  {g.items.join(', ')}
+                </p>
+              ))}
+            </div>
+          )}
         </section>
       ))}
-      {c.skills?.length > 0 && (
-        <section className="mt-4">
-          <h2 className="border-b border-black/15 pb-0.5 text-[12px] font-bold tracking-wide uppercase">Skills</h2>
-          <p className="mt-1.5 text-[13px]">{c.skills.join(', ')}</p>
-        </section>
-      )}
-    </>
+    </div>
   )
 }
 
 function Letter({ doc, editing, update }) {
   return (
-    <div className="space-y-3 text-[14px] leading-relaxed">
+    <div className="jake-letter space-y-3">
       <p>{doc.greeting}</p>
       {doc.paragraphs?.map((p, i) => (
         <div key={i} className={p.problems?.length ? FLAGGED : undefined}>
@@ -225,7 +292,7 @@ export default function DocumentPage() {
         </p>
       </div>
 
-      <article className="mx-auto mt-6 max-w-[8.5in] bg-white px-5 py-7 text-black sm:px-[0.7in] sm:py-[0.6in] shadow-card ring-1 ring-rule print:mt-0 print:max-w-none print:p-0 print:shadow-none print:ring-0">
+      <article className="mx-auto mt-6 max-w-[8.5in] bg-white px-5 py-7 text-black sm:px-[0.5in] sm:py-[0.5in] shadow-card ring-1 ring-rule print:mt-0 print:max-w-none print:p-0 print:shadow-none print:ring-0">
         {d.kind === 'RESUME' ? (
           <Resume doc={content} editing={editing} update={update} />
         ) : (

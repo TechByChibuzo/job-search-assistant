@@ -20,25 +20,28 @@ const resume = {
   createdAt: '2026-10-25T12:00:00Z',
   content: {
     name: 'Sam Rivera',
-    contactLine: 'sam@example.com',
-    summary: 'Backend engineer.',
-    skills: ['Java', 'Postgres'],
+    contact: ['555-0100', 'sam@example.com', 'github.com/samrivera'],
     droppedSkills: ['Rust'],
     sections: [
       {
         heading: 'Experience',
+        skillGroups: [],
         entries: [
           {
             title: 'Engineer',
+            detail: '',
+            titleRight: 'May 2025 – Aug 2025',
             subtitle: 'Acme',
-            dates: '2025',
+            subtitleRight: 'Austin, TX',
+            problems: [],
             bullets: [
-              { text: 'Built the billing API in Java.', source: 'Built the billing API', problems: [] },
+              { text: 'Built the billing API in **Java**.', source: 'Built the billing API', problems: [] },
               { text: 'Cut latency by 60%.', source: 'Made it faster', problems: ['"60%" isn\'t in your resume'] },
             ],
           },
         ],
       },
+      { heading: 'Technical Skills', entries: [], skillGroups: [{ label: 'Languages', items: ['Java', 'Python'] }] },
     ],
     flagged: 1,
     checked: true,
@@ -61,6 +64,40 @@ function renderPage() {
 }
 
 describe('DocumentPage', () => {
+  it('lays the resume out like the original: links, bold terms, places and dates, grouped skills', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => json(resume))
+    renderPage()
+
+    expect(await screen.findByText('Sam Rivera')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'sam@example.com' })).toHaveAttribute('href', 'mailto:sam@example.com')
+    expect(screen.getByRole('link', { name: 'github.com/samrivera' })).toHaveAttribute('href', 'https://github.com/samrivera')
+    expect(screen.queryByRole('link', { name: '555-0100' })).not.toBeInTheDocument()
+    expect(screen.getByText('Java', { selector: 'b' })).toBeInTheDocument()
+    expect(screen.getByText('Austin, TX')).toBeInTheDocument()
+    expect(screen.getByText('Languages').closest('p')).toHaveTextContent('Languages: Java, Python')
+  })
+
+  it('still opens a resume saved in the older shape', async () => {
+    const old = {
+      ...resume,
+      content: {
+        name: 'Sam Rivera',
+        contactLine: 'Austin, TX | sam@example.com',
+        summary: 'Backend engineer.',
+        skills: ['Java'],
+        sections: [{ heading: 'Experience', entries: [{ title: 'Engineer', subtitle: 'Acme', dates: '2025', bullets: [] }] }],
+        flagged: 0,
+        checked: true,
+      },
+    }
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => json(old))
+    renderPage()
+
+    expect(await screen.findByText('2025')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'sam@example.com' })).toBeInTheDocument()
+    expect(screen.getByText('Skills')).toBeInTheDocument()
+  })
+
   it('shows the tailored resume with what the check flagged, and removes a flagged line', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
       if (init?.method === 'PATCH') return json({ ...resume, content: JSON.parse(init.body).content })
@@ -77,7 +114,7 @@ describe('DocumentPage', () => {
     await userEvent.click(within(flagged).getByRole('button', { name: 'Remove this line' }))
     const patch = fetch.mock.calls.find(([, init]) => init?.method === 'PATCH')
     const sent = JSON.parse(patch[1].body).content
-    expect(sent.sections[0].entries[0].bullets.map((b) => b.text)).toEqual(['Built the billing API in Java.'])
+    expect(sent.sections[0].entries[0].bullets.map((b) => b.text)).toEqual(['Built the billing API in **Java**.'])
     expect(sent.flagged).toBe(0)
   })
 
@@ -89,13 +126,13 @@ describe('DocumentPage', () => {
     renderPage()
 
     await userEvent.click(await screen.findByRole('button', { name: 'Edit' }))
-    const summary = screen.getByDisplayValue('Backend engineer.')
-    await userEvent.clear(summary)
-    await userEvent.type(summary, 'Backend engineer who ships.')
+    const bullet = screen.getByDisplayValue('Cut latency by 60%.')
+    await userEvent.clear(bullet)
+    await userEvent.type(bullet, 'Made the billing API faster.')
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
     const patch = fetch.mock.calls.find(([, init]) => init?.method === 'PATCH')
     expect(patch[0]).toBe('/api/documents/5')
-    expect(JSON.parse(patch[1].body).content.summary).toBe('Backend engineer who ships.')
+    expect(JSON.parse(patch[1].body).content.sections[0].entries[0].bullets[1].text).toBe('Made the billing API faster.')
   })
 })

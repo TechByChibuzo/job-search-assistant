@@ -449,7 +449,7 @@ The applicant profile (`applicant_profile`, one row) holds contact details, link
 
 Three features for the application itself, all with the owner in charge of what goes out.
 
-**Tailored resume and cover letter.** From a role, Claude rewrites the resume for that posting, or writes a cover letter, as JSON matching a schema: sections, entries and bullets for a resume; greeting, paragraphs and closing for a letter. Rewording and reordering are allowed; inventing is not, and the app checks rather than trusts that:
+**Tailored resume and cover letter.** From a role, Claude rewrites the resume for that posting, or writes a cover letter, as JSON matching a schema: for a resume, the owner's own sections in their order, each entry's header lines copied as written, bullets with key terms in bold, and grouped skills; for a letter, greeting, paragraphs and closing. Only bullets and skill order change: no summary or new section is added. Rewording and reordering are allowed; inventing is not, and the app checks rather than trusts that:
 
 ```mermaid
 flowchart LR
@@ -461,7 +461,8 @@ flowchart LR
     D --> P[Printable page: owner fixes or removes flagged parts, prints to PDF]
 ```
 
-- Each resume bullet carries the resume line it was rewritten from (`source`). `SourceCheck` reads the resume's text with PDFBox and flags a bullet whose source isn't in the resume (90% of its words must appear), and any number in a bullet, summary or letter paragraph that isn't in the resume ("60%" or "3x" can't appear from nowhere; years and single digits are ignored). Skills the resume never names are removed and listed.
+- The page reproduces the owner's template (Jake's resume, in Computer Modern, the LaTeX typeface, bundled with the app) in CSS with point sizes, so the printed PDF looks like the original.
+- Each entry's title, place and dates must appear in the resume as written, or the entry is flagged. Each resume bullet carries the resume line it was rewritten from (`source`). `SourceCheck` reads the resume's text with PDFBox and flags a bullet whose source isn't in the resume (90% of its words must appear), and any number in a bullet, summary or letter paragraph that isn't in the resume ("60%" or "3x" can't appear from nowhere; years and single digits are ignored). Skills the resume never names are removed and listed.
 - Flagged parts are highlighted with the reason on the page, where the owner can edit them or remove them with one click. The highlights are screen-only; the page prints as a clean letter-size document (the app shell, buttons and marks are hidden by print CSS).
 - If the resume PDF has no readable text (a scan), nothing can be checked, and the page says so instead of implying the document passed.
 - Documents are stored as JSON (`tailored_document`, deleted with their role), so they can be reopened and edited. Generating one doesn't hold a database connection while Claude works (about 30 seconds at high effort).

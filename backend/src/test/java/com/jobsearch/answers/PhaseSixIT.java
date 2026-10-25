@@ -119,25 +119,25 @@ class PhaseSixIT {
         long job = pasteRole();
         when(claude.ask(anyString(), any(), anyString(), eq(com.jobsearch.ai.TailorServiceTestAccess.resumeSchema()), any()))
                 .thenReturn(json.readTree("""
-                        {"name": "Jane Doe", "contactLine": "jane@example.com", "summary": "Backend engineer.",
-                         "skills": ["Java", "Go"],
-                         "sections": [{"heading": "Experience", "entries": [{"title": "Software Engineer", "subtitle": "Oracle",
-                           "dates": "2021-2024", "bullets": [
+                        {"name": "Jane Doe", "contact": ["jane@example.com"],
+                         "sections": [{"heading": "Experience", "skillGroups": [], "entries": [{"title": "Software Engineer",
+                           "detail": "", "titleRight": "2021-2024", "subtitle": "Oracle", "subtitleRight": "", "bullets": [
                              {"text": "Built Java REST APIs at 3,000 requests per second",
                               "source": "Built REST APIs in Java and Spring Boot serving 3,000 requests per second"},
-                             {"text": "Cut latency by 90%", "source": "Cut query latency by 40% by adding PostgreSQL indexes"}]}]}]}"""));
+                             {"text": "Cut latency by 90%", "source": "Cut query latency by 40% by adding PostgreSQL indexes"}]}]},
+                           {"heading": "Skills", "entries": [], "skillGroups": [{"label": "Skills", "items": ["Java", "Go"]}]}]}"""));
 
         long doc = JsonPath.<Integer>read(mvc.perform(post("/api/jobs/" + job + "/documents").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"kind\": \"RESUME\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.content.flagged").value(1))
-                .andExpect(jsonPath("$.content.skills", Matchers.contains("Java")))
+                .andExpect(jsonPath("$.content.sections[1].skillGroups[0].items", Matchers.contains("Java")))
                 .andExpect(jsonPath("$.content.droppedSkills", Matchers.contains("Go")))
                 .andReturn().getResponse().getContentAsString(), "$.id");
 
         mvc.perform(get("/api/jobs/" + job + "/documents")).andExpect(jsonPath("$[0].kind").value("RESUME"));
-        mvc.perform(patch("/api/documents/" + doc).contentType(MediaType.APPLICATION_JSON).content("{\"content\": {\"summary\": \"Edited.\"}}"))
-                .andExpect(jsonPath("$.content.summary").value("Edited."));
+        mvc.perform(patch("/api/documents/" + doc).contentType(MediaType.APPLICATION_JSON).content("{\"content\": {\"name\": \"Edited.\"}}"))
+                .andExpect(jsonPath("$.content.name").value("Edited."));
         mvc.perform(delete("/api/documents/" + doc)).andExpect(status().isNoContent());
     }
 

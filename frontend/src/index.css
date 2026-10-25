@@ -206,11 +206,90 @@ body {
   }
 }
 
+/*
+ * Jake's resume template, which the owner's resume uses, set in CSS: Computer Modern at 11pt, the name centred
+ * and large, small-caps section headings over a rule, entries with the place and dates set right, and 10pt
+ * bullets. Points, so print and screen match LaTeX's sizes.
+ */
+.jake,
+.jake-letter {
+  font-family: 'CMU Serif', 'Latin Modern Roman', Georgia, serif;
+  font-size: 11pt;
+  line-height: 1.2;
+  color: #000;
+}
+.jake-head {
+  text-align: center;
+}
+.jake-head h1 {
+  font-size: 20.74pt;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.jake-head p {
+  margin-top: 3pt;
+  font-size: 10pt;
+}
+.jake-head a {
+  text-decoration: underline;
+  text-underline-offset: 2pt;
+}
+.jake-summary {
+  margin-top: 6pt;
+  font-size: 10pt;
+}
+.jake h2 {
+  margin-top: 7pt;
+  border-bottom: 0.6pt solid #000;
+  font-size: 12pt;
+  font-variant: small-caps;
+  line-height: 1.3;
+}
+.jake-entry {
+  margin: 3pt 0 0 0.15in;
+  break-inside: avoid;
+}
+.jake-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+}
+.jake-row > :last-child {
+  flex-shrink: 0;
+  text-align: right;
+}
+.jake-sub {
+  font-size: 10pt;
+}
+.jake ul {
+  margin: 1pt 0 0 0.15in;
+  padding-left: 0.12in;
+  list-style: none;
+  font-size: 10pt;
+}
+.jake li {
+  position: relative;
+}
+.jake li::before {
+  content: '•';
+  position: absolute;
+  left: -0.12in;
+  font-size: 8pt;
+  line-height: 1.6;
+}
+.jake-skills {
+  margin: 4pt 0 0 0.15in;
+  font-size: 10pt;
+}
+.jake-letter {
+  line-height: 1.45;
+}
+
 /* Tailored documents print as a clean page: white, no app around them, no toasts */
 @media print {
   @page {
     size: letter;
-    margin: 0.6in 0.7in;
+    margin: 0.5in;
   }
   body {
     background: #fff;
