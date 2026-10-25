@@ -10,6 +10,7 @@ Then it keeps track of the referral hunt itself: the roles I'm pursuing, the peo
 
 - **Add a company by pasting its careers link.** The app recognises eight kinds of site and shows what it found before you save: Greenhouse, Lever, Ashby, Workday (Nvidia, Salesforce, Adobe…), Avature (Bloomberg), amazon.jobs, Google Careers and Goldman Sachs.
 - **Keeps only what's relevant:** roles in the US, posted in the last 30 days, and matching each company's search phrases. Amazon posts over 200 US roles a day; "software engineer, backend" turns that into a list worth reading.
+- **Hides roles that won't sponsor a visa.** One switch hides roles for U.S. citizens or green card holders only, roles needing a security clearance, roles that say they won't sponsor, and companies you've marked as not sponsoring. Each restricted role quotes the sentence from its posting, so you can judge it; roles that only *may* have legal status rules stay visible with a label.
 - **Syncs every morning in the background,** with live progress in the sidebar. Roles that leave a board are closed, never deleted. One broken site never stops the others, and a company that moves to another system is flagged so you can paste the new link.
 - **An inbox you can scan.** Company logos throughout, fetched once and served by the app itself.
 - **An inbox ordered by freshness.** Roles are grouped by the day they were posted, new ones are highlighted, and a digest at the top shows which companies posted today. You can filter by keyword, location, company and remote / hybrid / on-site, and move through roles with j and k.
@@ -54,7 +55,7 @@ flowchart LR
 - **Backend:** Java 21, Spring Boot 3.5, Spring Data JPA, Flyway, `RestClient`, jsoup, the Gmail API with Google OAuth, and Claude through the Anthropic Java SDK. Organised by feature (`company`, `job`, `job.source`, `contact`, `tracker`, `alerts`, `ai`, `profile`, `answers`, `documents`). Each site is one class behind a `JobSource` interface.
 - **Extension:** Chrome Manifest V3 in plain JavaScript, with only `activeTab` access; the page reader and form filler are tested against sample pages and a real Lever form.
 - **Frontend:** React 19, Vite, Tailwind CSS 4, TanStack Query, lucide icons. Filters and the open role live in the URL, so any view can be bookmarked. Light and dark themes.
-- **Tests:** 334 in total. Every site source is tested against a trimmed copy of a real response, and the alert parsers against sample emails; the sync and the REST API run against real Postgres via Testcontainers; UI components are tested with Vitest and Testing Library. CI runs everything on every push.
+- **Tests:** 365 in total. Every site source is tested against a trimmed copy of a real response, and the alert parsers against sample emails; the sync and the REST API run against real Postgres via Testcontainers; UI components are tested with Vitest and Testing Library. CI runs everything on every push.
 
 The full design, with diagrams of the sync, the data model, the deployment path and the roadmap, is in [docs/architecture.md](docs/architecture.md). The decisions with real trade-offs are in [docs/adr](docs/adr).
 
@@ -112,8 +113,8 @@ cd frontend && npm test && npm run lint
 
 | Method | Path | |
 |---|---|---|
-| `GET` | `/api/jobs?q=&location=&companyId=&workplace=REMOTE&newOnly=&sort=fit&includeOlder=&includeClosed=&page=&size=` | Search open roles, most recently posted first |
-| `GET` | `/api/jobs/summary` | New roles since yesterday, by company |
+| `GET` | `/api/jobs?q=&location=&companyId=&workplace=REMOTE&newOnly=&needsSponsorship=&sort=fit&includeOlder=&includeClosed=&page=&size=` | Search open roles, most recently posted first |
+| `GET` | `/api/jobs/summary?needsSponsorship=` | New roles since yesterday, by company |
 | `GET` | `/api/jobs/{id}` | One role with its description |
 | `GET` `POST` | `/api/companies` | List or add companies (`{"careersUrl": "...", "search": "software engineer"}`) |
 | `POST` | `/api/companies/detect` | Preview what a careers link resolves to |

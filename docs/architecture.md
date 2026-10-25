@@ -147,6 +147,10 @@ The same rules apply to every source (`IngestRules`), configured in `app.jobs`:
 
 Search-based sources (Amazon, Google, Goldman Sachs, Workday) also send the phrases and the US filter to the site, so they fetch only what is wanted. Amazon posts over 200 US roles a day, so phrases are what make it usable; the add-company form asks for them.
 
+**Visa restrictions.** For an owner who needs sponsorship (an F-1 student moving to OPT and later H-1B), each posting's description is read by `VisaCheck` when it is stored, and the open roles are reread on start whenever the rules change. It classifies a role as citizens or green card holders only (export control, "U.S. person" status), clearance required, no sponsorship ("without the need for current or future visa sponsorship"), or possibly restricted ("may need to meet certain legal status requirements", a clearance that is only "a plus"). Phrases are matched within one sentence and never on a lone word, because "sponsor" is also Amazon's Sponsored Products and "sponsorship" what senior engineers give juniors; sentences don't end at "U.S.". The matching sentence is stored and shown, so the owner judges the evidence rather than a label. On the real inbox it marked 117 of about 1,200 roles as restricted, almost all Amazon export-control and clearance roles, with no false positives.
+
+The inbox's "Hide no-sponsorship" switch hides the definite restrictions (possibly restricted roles stay, labelled), and roles at companies the owner has marked as not sponsoring, for postings that don't say. It is a standing preference kept in the browser, not a one-off filter, and the new-role counts honour it. Roles without a description (Workday and Avature lists, roles added by link) can only be hidden by marking the company.
+
 ### 5.4 Paging and coverage
 
 Search feeds are paged newest first, and stop at the first **whole page** older than the cutoff: these sites' date sort is only roughly ordered, so one old role mid-page doesn't stop paging. Pages are spaced out (`app.http.page-delay`, 750 ms) and capped (`app.http.max-pages`, 60).
@@ -228,6 +232,7 @@ erDiagram
         timestamptz last_synced_at
         text last_sync_status "OK | BOARD_NOT_FOUND | FAILED"
         text last_sync_error
+        boolean no_sponsorship "set by the owner"
     }
     JOB {
         bigint id PK
@@ -246,6 +251,8 @@ erDiagram
         timestamptz closed_at
         boolean baseline "seen on first import, not new"
         boolean manual "added by link; syncs leave it alone"
+        text visa_restriction "CITIZENS_ONLY | CLEARANCE | NO_SPONSORSHIP | MAY_BE_RESTRICTED"
+        text visa_evidence "the sentence it was read from"
     }
     CONTACT {
         bigint id PK
