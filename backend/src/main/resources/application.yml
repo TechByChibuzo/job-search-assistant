@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: job-search-assistant
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/jobsearch}
+    username: ${DB_USER:jobsearch}
+    password: ${DB_PASSWORD:jobsearch}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  mvc:
+    problemdetails:
+      enabled: true
+  http:
+    client:
+      # A slow job board must not stall the whole sync
+      connect-timeout: 5s
+      read-timeout: 30s
+
+server:
+  # Single user on their own machine: never listen on the network (ADR 0001)
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+  sync:
+    enabled: true
+    # Daily at 07:00 local time
+    cron: "0 0 7 * * *"
+  http:
+    user-agent: "job-search-assistant/0.1 (personal job search; one request per board per day)"
+  jobs:
+    new-window: 24h

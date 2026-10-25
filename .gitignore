@@ -1,0 +1,17 @@
+# Personal documents: resume, answer bank, exports. Never committed.
+private/
+
+# Build output
+backend/target/
+frontend/node_modules/
+frontend/dist/
+
+# Local config and secrets
+.env
+*.local
+
+# Editors and OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
