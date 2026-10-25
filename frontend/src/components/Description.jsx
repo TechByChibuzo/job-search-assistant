@@ -1,9 +1,31 @@
+import { ExternalLink, FileText } from 'lucide-react'
 import { parseDescription } from '../lib/description'
 
-export default function Description({ text }) {
-  if (!text) {
-    return <p className="text-slate">This posting has no description in its feed. Open the posting to read it.</p>
-  }
+/** Why there's no description, and the way to the full posting. */
+function NoDescription({ job, url }) {
+  return (
+    <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-rule px-5 py-6 sm:flex-row sm:items-center">
+      <FileText className="size-5 shrink-0 text-faint" aria-hidden />
+      <div className="flex-1">
+        <p className="font-medium text-ink">The full posting is on {job ? `${job.companyName}’s` : 'the company’s'} site</p>
+        <p className="mt-0.5 text-sm text-slate">
+          {job?.manual
+            ? 'You added this role by link, so the app has its title and location but not the description.'
+            : 'This company’s job feed lists roles without their descriptions.'}
+        </p>
+      </div>
+      {url && (
+        <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline">
+          Read it there
+          <ExternalLink className="size-3.5" aria-hidden />
+        </a>
+      )}
+    </div>
+  )
+}
+
+export default function Description({ text, job, url }) {
+  if (!text) return <NoDescription job={job} url={url} />
   return (
     <div className="space-y-3">
       {parseDescription(text).map((b, i) => {

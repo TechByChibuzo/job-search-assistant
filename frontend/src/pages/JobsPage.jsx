@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Inbox, Link2 } from 'lucide-react'
 import { useJobs, useSummary } from '../api/hooks'
@@ -7,6 +7,7 @@ import Filters from '../components/Filters'
 import JobDetail from '../components/JobDetail'
 import JobList, { JobListSkeleton } from '../components/JobList'
 import TodayStrip from '../components/TodayStrip'
+import { markSeen } from '../lib/seen'
 import { useKeyboardNav } from '../lib/useKeyboardNav'
 import { setNeedsSponsorship, useNeedsSponsorship } from '../lib/visa'
 import { secondaryButton } from '../lib/ui'
@@ -83,10 +84,13 @@ export default function JobsPage() {
   const select = useCallback((id) => setParams(writeFilters(filters, id)), [filters, setParams])
   const close = useCallback(() => select(null), [select])
   useKeyboardNav({ ids, selected, onSelect: select, onClose: close })
+  // Opening a role clears its highlight in the list
+  useEffect(() => markSeen(selected), [selected])
 
   return (
     <div className="pt-6 lg:pt-10">
-      <header className="flex flex-col gap-5">
+      {/* On a phone an open role takes the screen; the header and filters come back with the list */}
+      <header className={`flex-col gap-5 ${selected ? 'hidden lg:flex' : 'flex'}`}>
         <div>
           <div className="flex items-center justify-between gap-4">
             <h1 className="text-3xl font-semibold tracking-tight">Inbox</h1>
@@ -119,12 +123,23 @@ export default function JobsPage() {
           <div className="flex items-baseline justify-between px-1 pb-2 text-sm text-slate">
             <span aria-live="polite">
               {jobs.isSuccess &&
-                `${total.toLocaleString()} open ${total === 1 ? 'role' : 'roles'}${maxAgeDays ? ` from the last ${maxAgeDays} days` : ''}${
-                  needsSponsorship ? ', without the ones that won’t sponsor' : ''
+                `${total.toLocaleString()} open ${total === 1 ? 'role' : 'roles'}${needsSponsorship ? ' that may sponsor' : ''}${
+                  maxAgeDays ? `, last ${maxAgeDays} days` : ''
                 }`}
             </span>
-            <span className="hidden text-xs text-faint xl:inline">
-              <kbd className="font-sans">j</kbd> / <kbd className="font-sans">k</kbd> to move
+            <span className="flex items-center gap-3">
+              <span className="hidden text-xs text-faint xl:inline">
+                <kbd className="font-sans">j</kbd> / <kbd className="font-sans">k</kbd> to move
+              </span>
+              <select
+                aria-label="Sort"
+                value={filters.sort}
+                onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
+                className="-my-1 h-8 rounded-md border border-transparent bg-transparent pr-1 pl-2 text-sm font-medium text-ink hover:border-rule focus:border-accent focus:outline-none"
+              >
+                <option value="newest">Newest first</option>
+                <option value="fit">Best fit first</option>
+              </select>
             </span>
           </div>
           <div className="scroll-quiet overflow-hidden rounded-xl border border-rule bg-paper lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto">

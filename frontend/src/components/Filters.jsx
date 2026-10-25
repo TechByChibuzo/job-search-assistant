@@ -46,7 +46,7 @@ export default function Filters({ filters, onChange, needsSponsorship = false, o
         type="search"
         aria-label="Search titles and teams"
         placeholder="Search titles and teams"
-        className="w-full sm:w-72"
+        className="w-full sm:w-64"
         value={filters.q}
         onChange={(q) => set({ q })}
       />
@@ -55,13 +55,13 @@ export default function Filters({ filters, onChange, needsSponsorship = false, o
         type="search"
         aria-label="Location"
         placeholder="City or state"
-        className="w-[calc(50%-0.25rem)] sm:w-44"
+        className="w-[calc(50%-0.25rem)] sm:w-40"
         value={filters.location}
         onChange={(location) => set({ location })}
       />
       <select
         aria-label="Company"
-        className={`${field} w-[calc(50%-0.25rem)] px-3 sm:w-48`}
+        className={`${field} w-[calc(50%-0.25rem)] px-3 sm:w-44`}
         value={filters.companyId ?? ''}
         onChange={(e) => set({ companyId: e.target.value || null })}
       >
@@ -90,15 +90,6 @@ export default function Filters({ filters, onChange, needsSponsorship = false, o
           )
         })}
       </div>
-      <select
-        aria-label="Sort"
-        value={filters.sort}
-        onChange={(e) => set({ sort: e.target.value })}
-        className={`${field} px-3`}
-      >
-        <option value="newest">Newest first</option>
-        <option value="fit">Best fit first</option>
-      </select>
       <button
         type="button"
         aria-pressed={filters.newOnly}

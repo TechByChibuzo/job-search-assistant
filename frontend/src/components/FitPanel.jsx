@@ -27,9 +27,9 @@ export default function FitPanel({ job, detail }) {
 
   return (
     <section aria-labelledby="fit-heading" className="rounded-xl border border-rule bg-sunken/40 p-4 sm:p-5">
-      <div className="flex items-start gap-4">
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
         {scored ? <FitScore score={job.matchScore} size="lg" /> : <Sparkles className="mt-0.5 size-5 text-faint" aria-hidden />}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-56">
           <h2 id="fit-heading" className="font-semibold">
             {scored ? 'Your fit' : 'How well do you fit?'}
           </h2>

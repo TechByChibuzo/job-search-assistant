@@ -71,6 +71,51 @@ class LogoServiceTest {
     }
 
     @Test
+    void aTinyIconIsReplacedByALargerOneFromDuckDuckGo() {
+        when(links.sample(1L)).thenReturn(List.of());
+        server.expect(requestTo(GOOGLE.formatted("airbnb.com"))).andRespond(withSuccess(png(16), MediaType.IMAGE_PNG));
+        server.expect(requestTo(DDG.formatted("airbnb.com"))).andRespond(withSuccess(ico(64), MediaType.parseMediaType("image/x-icon")));
+
+        assertThat(service.logo(1L)).get().extracting(LogoService.Logo::contentType).isEqualTo("image/x-icon");
+    }
+
+    @Test
+    void keepsATinyIconWhenThereIsNothingBetter() {
+        when(links.sample(1L)).thenReturn(List.of());
+        server.expect(requestTo(GOOGLE.formatted("airbnb.com"))).andRespond(withSuccess(png(16), MediaType.IMAGE_PNG));
+        server.expect(requestTo(DDG.formatted("airbnb.com"))).andRespond(withResourceNotFound());
+
+        assertThat(service.logo(1L)).get().extracting(LogoService.Logo::contentType).isEqualTo("image/png");
+    }
+
+    @Test
+    void readsIconSizes() {
+        assertThat(LogoService.width(png(16))).isEqualTo(16);
+        assertThat(LogoService.width(ico(64))).isEqualTo(64);
+        assertThat(LogoService.width(ico(0))).isEqualTo(256);
+        assertThat(LogoService.width(PNG)).isEqualTo(-1);
+    }
+
+    /** A PNG header claiming the given width, padded past the minimum size. */
+    private static byte[] png(int width) {
+        byte[] b = new byte[200];
+        byte[] sig = {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0, 0, 0, 13, 'I', 'H', 'D', 'R'};
+        System.arraycopy(sig, 0, b, 0, sig.length);
+        b[18] = (byte) (width >> 8);
+        b[19] = (byte) width;
+        return b;
+    }
+
+    /** An ICO header with one image of the given width (0 means 256). */
+    private static byte[] ico(int width) {
+        byte[] b = new byte[200];
+        b[2] = 1;
+        b[4] = 1;
+        b[6] = (byte) width;
+        return b;
+    }
+
+    @Test
     void fallsBackToDuckDuckGoThenRecordsThatNoneWasFound() {
         when(links.sample(1L)).thenReturn(List.of());
         server.expect(requestTo(GOOGLE.formatted("airbnb.com"))).andRespond(withResourceNotFound());

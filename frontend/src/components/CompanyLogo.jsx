@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import Monogram from './Monogram'
 
+/** Where an icon is too small to scale up cleanly, it's shown at its own size rather than blurred. */
+const SMALL_ICON = { sm: 'size-4', md: 'size-4', lg: 'size-5' }
+
 const SIZES = {
   sm: 'size-6 rounded-md p-0.5',
   md: 'size-9 rounded-lg p-1',
@@ -13,6 +16,7 @@ const SIZES = {
  */
 export default function CompanyLogo({ companyId, name, size = 'md' }) {
   const [failed, setFailed] = useState(false)
+  const [small, setSmall] = useState(false)
   if (companyId == null || failed) return <Monogram name={name} size={size} />
   return (
     <span className={`inline-flex shrink-0 items-center justify-center bg-white ring-1 ring-rule ${SIZES[size]}`}>
@@ -22,7 +26,8 @@ export default function CompanyLogo({ companyId, name, size = 'md' }) {
         loading="lazy"
         decoding="async"
         onError={() => setFailed(true)}
-        className="size-full rounded-[inherit] object-contain"
+        onLoad={(e) => setSmall(e.currentTarget.naturalWidth > 0 && e.currentTarget.naturalWidth < 32)}
+        className={small ? SMALL_ICON[size] : 'size-full rounded-[inherit] object-contain'}
       />
     </span>
   )

@@ -144,7 +144,7 @@ export default function JobDetail({ id, onClose }) {
         <DocumentsPanel job={job} />
       </div>
       <div className="max-w-[70ch] p-6 text-[15px] leading-relaxed text-ink/90 sm:p-8">
-        <Description text={description} />
+        <Description text={description} job={job} url={postingUrl} />
       </div>
     </article>
   )

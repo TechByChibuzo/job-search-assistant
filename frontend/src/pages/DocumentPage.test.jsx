@@ -74,7 +74,7 @@ describe('DocumentPage', () => {
     const flagged = screen.getByText('Cut latency by 60%.').closest('li')
     expect(within(flagged).getByText('"60%" isn\'t in your resume')).toBeInTheDocument()
 
-    await userEvent.click(within(flagged).getByRole('button', { name: 'Remove' }))
+    await userEvent.click(within(flagged).getByRole('button', { name: 'Remove this line' }))
     const patch = fetch.mock.calls.find(([, init]) => init?.method === 'PATCH')
     const sent = JSON.parse(patch[1].body).content
     expect(sent.sections[0].entries[0].bullets.map((b) => b.text)).toEqual(['Built the billing API in Java.'])

@@ -9,9 +9,9 @@ function percent(rate) {
 
 function Tile({ label, value, note }) {
   return (
-    <div className="rounded-xl border border-rule bg-surface p-5 shadow-card">
+    <div className="rounded-xl border border-rule bg-surface p-4 shadow-card sm:p-5">
       <p className="text-sm text-slate">{label}</p>
-      <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{value}</p>
+      <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl">{value}</p>
       {note && <p className="mt-1 text-xs text-faint">{note}</p>}
     </div>
   )
@@ -132,7 +132,7 @@ export default function InsightsPage() {
         </div>
       ) : (
         <>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             <Tile
               label="Reply rate"
               value={percent(o.replyRate)}
@@ -171,9 +171,10 @@ export default function InsightsPage() {
           )}
 
           <h2 className="mt-10 text-lg font-semibold">Roles by stage</h2>
-          <ol className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-rule bg-rule shadow-card sm:grid-cols-4 lg:grid-cols-7">
+          {/* Cells grow to fill the last row, so no empty cell shows at any width */}
+          <ol className="mt-3 flex flex-wrap gap-px overflow-hidden rounded-xl border border-rule bg-rule shadow-card">
             {stages.map((s) => (
-              <li key={s.value} className="bg-surface px-4 py-3">
+              <li key={s.value} className="min-w-[calc(50%-1px)] flex-1 bg-surface px-4 py-3 sm:min-w-[calc(25%-1px)] lg:min-w-0">
                 <p className="text-xs text-slate">{s.label}</p>
                 <p className="mt-0.5 text-xl font-semibold tabular-nums">{s.count}</p>
               </li>

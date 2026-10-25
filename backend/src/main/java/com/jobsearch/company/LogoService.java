@@ -29,6 +29,8 @@ public class LogoService {
     private static final Duration KEEP_FOUND = Duration.ofDays(30);
     private static final Duration RETRY_MISSING = Duration.ofDays(1);
     private static final int MAX_BYTES = 300_000;
+    /** Icons narrower than this look blurry at logo size. */
+    private static final int MIN_WIDTH = 32;
     private static final Logger log = LoggerFactory.getLogger(LogoService.class);
 
     private final CompanyRepository companies;
@@ -115,9 +117,42 @@ public class LogoService {
         return domains;
     }
 
+    /**
+     * Google's icon, unless it is known to be tiny (some sites only have a 16-pixel favicon, blurry at logo
+     * size), in which case DuckDuckGo's is used if it is larger.
+     */
     private Optional<Logo> fetch(String domain) {
-        return get("https://www.google.com/s2/favicons?domain={d}&sz=128", domain)
-                .or(() -> get("https://icons.duckduckgo.com/ip3/{d}.ico", domain));
+        Optional<Logo> google = get("https://www.google.com/s2/favicons?domain={d}&sz=128", domain);
+        if (google.isPresent() && !tiny(google.get())) {
+            return google;
+        }
+        Optional<Logo> ddg = get("https://icons.duckduckgo.com/ip3/{d}.ico", domain);
+        if (google.isPresent() && ddg.isPresent() && width(ddg.get().image()) <= width(google.get().image())) {
+            return google;
+        }
+        return ddg.or(() -> google);
+    }
+
+    private static boolean tiny(Logo logo) {
+        int width = width(logo.image());
+        return width >= 0 && width < MIN_WIDTH;
+    }
+
+    /** The pixel width of a PNG, or of an ICO's largest image; -1 when it can't be read. */
+    static int width(byte[] image) {
+        if (image.length >= 24 && (image[0] & 0xff) == 0x89 && image[1] == 'P' && image[2] == 'N' && image[3] == 'G') {
+            return ((image[16] & 0xff) << 24) | ((image[17] & 0xff) << 16) | ((image[18] & 0xff) << 8) | (image[19] & 0xff);
+        }
+        if (image.length >= 6 && image[0] == 0 && image[1] == 0 && image[2] == 1 && image[3] == 0) {
+            int count = (image[4] & 0xff) | ((image[5] & 0xff) << 8);
+            int widest = -1;
+            for (int i = 0; i < count && 6 + i * 16 < image.length; i++) {
+                int w = image[6 + i * 16] & 0xff;
+                widest = Math.max(widest, w == 0 ? 256 : w);
+            }
+            return widest;
+        }
+        return -1;
     }
 
     private Optional<Logo> get(String url, String domain) {

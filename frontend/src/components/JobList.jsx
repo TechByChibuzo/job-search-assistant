@@ -1,10 +1,11 @@
 import { groupByDay, shortAge } from '../lib/dates'
 import { workplaceLabel } from '../lib/labels'
+import { useSeenJobs } from '../lib/seen'
 import { visaNote } from '../lib/visa'
 import FitScore from './FitScore'
 import CompanyLogo from './CompanyLogo'
 
-function JobRow({ job, selected, onSelect }) {
+function JobRow({ job, selected, unread, onSelect }) {
   const workplace = workplaceLabel(job.workplace)
   const visa = visaNote(job)
   return (
@@ -23,7 +24,8 @@ function JobRow({ job, selected, onSelect }) {
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-3">
             <span className="min-w-0 flex-1 text-[15px] leading-snug font-medium">
-              <span className={job.isNew ? 'highlight-soft highlight-in' : undefined}>{job.title}</span>
+              <span className={unread ? 'highlight-soft highlight-in' : undefined}>{job.title}</span>
+              {unread && <span className="sr-only"> (new, not opened yet)</span>}
             </span>
             <span className="flex shrink-0 items-center gap-2">
               {job.listedAt && (
@@ -57,6 +59,7 @@ function JobRow({ job, selected, onSelect }) {
 }
 
 export default function JobList({ jobs, selectedId, onSelect }) {
+  const seen = useSeenJobs()
   return groupByDay(jobs).map((group) => (
     <section key={group.label} aria-label={group.label}>
       <h2 className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-rule bg-paper/95 px-4 py-2 text-xs font-semibold text-slate backdrop-blur">
@@ -65,7 +68,13 @@ export default function JobList({ jobs, selectedId, onSelect }) {
       </h2>
       <ul className="divide-y divide-rule/70">
         {group.jobs.map((job) => (
-          <JobRow key={job.id} job={job} selected={job.id === selectedId} onSelect={onSelect} />
+          <JobRow
+            key={job.id}
+            job={job}
+            selected={job.id === selectedId}
+            unread={job.isNew && !seen.has(job.id)}
+            onSelect={onSelect}
+          />
         ))}
       </ul>
     </section>

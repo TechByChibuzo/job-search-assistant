@@ -17,4 +17,15 @@ describe('CompanyLogo', () => {
     expect(container.querySelector('img')).toBeNull()
     expect(screen.getByText('LM')).toBeInTheDocument()
   })
+
+  it('shows a tiny icon at its own size instead of blurring it', () => {
+    const { container } = render(<CompanyLogo companyId={11} name="Lockheed Martin" />)
+    const img = container.querySelector('img')
+    Object.defineProperty(img, 'naturalWidth', { value: 16 })
+
+    fireEvent.load(img)
+
+    expect(img).toHaveClass('size-4')
+    expect(img).not.toHaveClass('size-full')
+  })
 })

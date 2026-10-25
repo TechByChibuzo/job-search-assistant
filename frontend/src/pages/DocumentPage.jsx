@@ -4,26 +4,40 @@ import { AlertTriangle, ArrowLeft, Pencil, Printer, Trash2, X } from 'lucide-rea
 import { useDeleteDocument, useDocument, useEditDocument } from '../api/hooks'
 import { useToast } from '../components/Toasts'
 import { formatDate } from '../lib/dates'
-import { primaryButton, secondaryButton, textareaClass } from '../lib/ui'
+import { primaryButton, secondaryButton } from '../lib/ui'
 
-/** What the check found about one part, on screen only. */
-function Problems({ problems }) {
+/*
+ * The paper is white in both themes, so marks on it use fixed light colours rather than the theme's tokens,
+ * which turn dark (and muddy on white) in dark mode.
+ */
+const FLAGGED = 'rounded bg-[#fff6dc] print:bg-transparent'
+
+/** What the check found about one part, and what can be done about it, on screen only. */
+function Problems({ problems, children }) {
   if (!problems?.length) return null
   return (
-    <span className="mt-1 flex flex-wrap gap-1.5 print:hidden">
+    <span className="mt-1 flex flex-wrap items-center gap-1.5 print:hidden">
       {problems.map((p) => (
-        <span key={p} className="inline-flex items-center gap-1 rounded bg-warn-wash px-1.5 py-0.5 text-[11px] font-medium text-warn">
+        <span key={p} className="inline-flex items-center gap-1 rounded bg-[#ffe9a8] px-1.5 py-0.5 text-[11px] font-medium text-[#7a5200]">
           <AlertTriangle className="size-3" aria-hidden />
           {p}
         </span>
       ))}
+      {children}
     </span>
   )
 }
 
 function Editable({ editing, value, onChange, rows = 2, className = '' }) {
   if (!editing) return <span className={className}>{value}</span>
-  return <textarea value={value} rows={rows} onChange={(e) => onChange(e.target.value)} className={`${textareaClass} mt-0 text-sm`} />
+  return (
+    <textarea
+      value={value}
+      rows={rows}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full rounded-md border border-black/20 bg-white px-2 py-1.5 text-sm text-black focus:border-[#3a55d9] focus:outline-none"
+    />
+  )
 }
 
 function Resume({ doc, editing, update }) {
@@ -53,19 +67,20 @@ function Resume({ doc, editing, update }) {
               </div>
               <ul className="mt-1 list-disc space-y-0.5 pl-5 text-[13px] leading-snug">
                 {entry.bullets?.map((b, bi) => (
-                  <li key={bi} className={b.problems?.length ? 'rounded bg-warn-wash/60 print:bg-transparent' : undefined}>
+                  <li key={bi} className={b.problems?.length ? FLAGGED : undefined}>
                     <Editable editing={editing} value={b.text} onChange={(v) => update((d) => (d.sections[si].entries[ei].bullets[bi].text = v))} />
-                    <Problems problems={b.problems} />
-                    {b.problems?.length > 0 && !editing && (
-                      <button
-                        type="button"
-                        onClick={() => update((d) => d.sections[si].entries[ei].bullets.splice(bi, 1), true)}
-                        className="ml-2 inline-flex items-center gap-0.5 text-[11px] font-medium text-slate hover:text-danger print:hidden"
-                      >
-                        <X className="size-3" aria-hidden />
-                        Remove
-                      </button>
-                    )}
+                    <Problems problems={b.problems}>
+                      {!editing && (
+                        <button
+                          type="button"
+                          onClick={() => update((d) => d.sections[si].entries[ei].bullets.splice(bi, 1), true)}
+                          className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[11px] font-medium text-black/60 hover:bg-black/5 hover:text-[#b42318]"
+                        >
+                          <X className="size-3" aria-hidden />
+                          Remove this line
+                        </button>
+                      )}
+                    </Problems>
                   </li>
                 ))}
               </ul>
@@ -88,7 +103,7 @@ function Letter({ doc, editing, update }) {
     <div className="space-y-3 text-[14px] leading-relaxed">
       <p>{doc.greeting}</p>
       {doc.paragraphs?.map((p, i) => (
-        <div key={i} className={p.problems?.length ? 'rounded bg-warn-wash/60 print:bg-transparent' : undefined}>
+        <div key={i} className={p.problems?.length ? FLAGGED : undefined}>
           <p>
             <Editable editing={editing} rows={5} value={p.text} onChange={(v) => update((d) => (d.paragraphs[i].text = v))} />
           </p>
@@ -210,7 +225,7 @@ export default function DocumentPage() {
         </p>
       </div>
 
-      <article className="mx-auto mt-6 max-w-[8.5in] bg-white px-[0.7in] py-[0.6in] text-black shadow-card ring-1 ring-rule print:mt-0 print:max-w-none print:p-0 print:shadow-none print:ring-0">
+      <article className="mx-auto mt-6 max-w-[8.5in] bg-white px-5 py-7 text-black sm:px-[0.7in] sm:py-[0.6in] shadow-card ring-1 ring-rule print:mt-0 print:max-w-none print:p-0 print:shadow-none print:ring-0">
         {d.kind === 'RESUME' ? (
           <Resume doc={content} editing={editing} update={update} />
         ) : (
