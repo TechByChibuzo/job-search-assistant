@@ -9,6 +9,7 @@ import { Pill } from '../components/StatusPill'
 import { useToast } from '../components/Toasts'
 import { timeAgo } from '../lib/dates'
 import { STAGES, kindLabel, relativeDay } from '../lib/tracker'
+import { safeHref } from '../lib/links'
 
 function DueList() {
   const toast = useToast()
@@ -37,8 +38,8 @@ function DueList() {
           <div className="min-w-0 flex-1">
             <p className="text-[15px]">
               Follow up with{' '}
-              {o.person.linkedinUrl ? (
-                <a href={o.person.linkedinUrl} target="_blank" rel="noreferrer" className="font-semibold hover:underline">
+              {safeHref(o.person.linkedinUrl) ? (
+                <a href={safeHref(o.person.linkedinUrl)} target="_blank" rel="noreferrer" className="font-semibold hover:underline">
                   {o.person.name}
                 </a>
               ) : (

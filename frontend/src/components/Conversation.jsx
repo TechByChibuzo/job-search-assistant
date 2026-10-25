@@ -3,6 +3,7 @@ import { ChevronDown, ExternalLink, Trash2 } from 'lucide-react'
 import { useDeleteOutreach, useRecordEvent } from '../api/hooks'
 import { timeAgo } from '../lib/dates'
 import { EVENT_LABELS, kindLabel, relativeDay } from '../lib/tracker'
+import { safeHref } from '../lib/links'
 import { OutreachPill } from './StatusPill'
 import { useToast } from './Toasts'
 
@@ -36,8 +37,8 @@ export default function Conversation({ outreach: o, showRole = false }) {
       <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
         <div className="min-w-0 flex-1">
           <p className="font-medium">
-            {o.person.linkedinUrl ? (
-              <a href={o.person.linkedinUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:underline">
+            {safeHref(o.person.linkedinUrl) ? (
+              <a href={safeHref(o.person.linkedinUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:underline">
                 {o.person.name}
                 <ExternalLink className="size-3 text-faint" aria-hidden />
               </a>

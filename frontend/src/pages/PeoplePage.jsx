@@ -10,6 +10,7 @@ import { useToast } from '../components/Toasts'
 import { timeAgo } from '../lib/dates'
 import { kindLabel } from '../lib/tracker'
 import { inputClass, primaryButton, secondaryButton, textareaClass } from '../lib/ui'
+import { safeHref } from '../lib/links'
 
 function PersonDialog({ open, onClose, person }) {
   const toast = useToast()
@@ -159,8 +160,8 @@ export default function PeoplePage() {
                 <li key={p.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">
-                      {p.linkedinUrl ? (
-                        <a href={p.linkedinUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:underline">
+                      {safeHref(p.linkedinUrl) ? (
+                        <a href={safeHref(p.linkedinUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:underline">
                           {p.name}
                           <ExternalLink className="size-3 text-faint" aria-hidden />
                         </a>

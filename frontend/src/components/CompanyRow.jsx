@@ -4,6 +4,7 @@ import { ExternalLink, Pause, Pencil, Play, RefreshCw, Trash2 } from 'lucide-rea
 import { useDeleteCompany, useStartSync, useSyncProgress, useUpdateCompany } from '../api/hooks'
 import { timeAgo } from '../lib/dates'
 import { boardLabel, boardUrl, sourceLabel } from '../lib/labels'
+import { safeHref } from '../lib/links'
 import Monogram from './Monogram'
 import SearchChips from './SearchChips'
 import { useToast } from './Toasts'
@@ -160,7 +161,7 @@ export default function CompanyRow({ company }) {
               <span>No feed the app can read. Add its roles by link, or set up job alerts.</span>
             ) : (
               <a
-                href={boardUrl(company.ats, company.board)}
+                href={safeHref(boardUrl(company.ats, company.board)) ?? undefined}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 hover:text-ink"

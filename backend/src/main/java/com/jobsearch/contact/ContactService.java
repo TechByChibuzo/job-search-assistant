@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.jobsearch.common.BadRequestException;
+import com.jobsearch.common.Links;
 import com.jobsearch.common.NotFoundException;
 import com.jobsearch.company.CompanyService;
 
@@ -41,14 +42,14 @@ public class ContactService {
             throw new BadRequestException("Say which company this person works at.");
         }
         Contact contact = new Contact(company, name.strip(), kind == null ? ContactKind.OTHER : kind);
-        contact.update(null, clean(title), null, clean(linkedinUrl), clean(email), clean(notes));
+        contact.update(null, clean(title), null, profileLink(linkedinUrl), clean(email), clean(notes));
         return contacts.save(contact);
     }
 
     @Transactional
     public Contact update(long id, String name, String title, ContactKind kind, String linkedinUrl, String email, String notes) {
         Contact contact = get(id);
-        contact.update(name == null || name.isBlank() ? null : name.strip(), clean(title), kind, clean(linkedinUrl),
+        contact.update(name == null || name.isBlank() ? null : name.strip(), clean(title), kind, profileLink(linkedinUrl),
                 clean(email), clean(notes));
         return contact;
     }
@@ -56,6 +57,11 @@ public class ContactService {
     @Transactional
     public void delete(long id) {
         contacts.delete(get(id));
+    }
+
+    /** Rendered as a link, so only an absolute http(s) URL is accepted. */
+    private static String profileLink(String url) {
+        return Links.optionalHttp(url, "The profile link must start with https://");
     }
 
     private static String clean(String s) {

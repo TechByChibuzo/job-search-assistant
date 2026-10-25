@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -40,7 +41,7 @@ class ContactController {
             @Size(max = 300) String title,
             ContactKind kind,
             @Size(max = 500) String linkedinUrl,
-            @Size(max = 300) String email,
+            @Email @Size(max = 300) String email,
             @Size(max = 5000) String notes) {}
 
     /** Replaces the optional fields; a blank name or a missing kind leaves those unchanged. */
@@ -49,7 +50,7 @@ class ContactController {
             @Size(max = 300) String title,
             ContactKind kind,
             @Size(max = 500) String linkedinUrl,
-            @Size(max = 300) String email,
+            @Email @Size(max = 300) String email,
             @Size(max = 5000) String notes) {}
 
     record ContactResponse(

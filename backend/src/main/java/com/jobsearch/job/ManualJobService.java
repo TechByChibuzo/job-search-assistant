@@ -1,7 +1,5 @@
 package com.jobsearch.job;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
@@ -10,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.jobsearch.common.BadRequestException;
+import com.jobsearch.common.Links;
 import com.jobsearch.common.NotFoundException;
 import com.jobsearch.company.AtsDetector;
 import com.jobsearch.company.AtsType;
@@ -75,15 +74,6 @@ public class ManualJobService {
     }
 
     private static String checkLink(String url) {
-        String link = url == null ? "" : url.strip();
-        try {
-            URI uri = new URI(link);
-            if (uri.getScheme() == null || !uri.getScheme().matches("https?") || uri.getHost() == null) {
-                throw new BadRequestException("Paste the full link to the posting, starting with https://");
-            }
-            return uri.toString();
-        } catch (URISyntaxException e) {
-            throw new BadRequestException("That doesn't look like a link: " + e.getReason());
-        }
+        return Links.requireHttp(url, "Paste the full link to the posting, starting with https://");
     }
 }

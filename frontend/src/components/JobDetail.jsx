@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useJob, useSetJobClosed } from '../api/hooks'
 import { formatDate, timeAgo } from '../lib/dates'
 import { workplaceLabel } from '../lib/labels'
+import { safeHref } from '../lib/links'
 import Description from './Description'
 import Monogram from './Monogram'
 import TrackPanel from './TrackPanel'
@@ -49,6 +50,7 @@ export default function JobDetail({ id, onClose }) {
   if (error) return <p className="p-8 text-sm text-danger">{error.message}</p>
 
   const { summary: job, description, closedAt } = data
+  const postingUrl = safeHref(job.url)
   const facts = [
     ['Team', job.team],
     ['Location', job.location],
@@ -88,16 +90,20 @@ export default function JobDetail({ id, onClose }) {
           ))}
         </dl>
         <div className="mt-7 flex flex-wrap gap-2">
-          <a
-            href={job.url}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-paper hover:opacity-90"
-          >
-            Open the posting
-            <ExternalLink className="size-4" aria-hidden />
-          </a>
-          <CopyLink url={job.url} />
+          {postingUrl && (
+            <>
+              <a
+                href={postingUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-paper hover:opacity-90"
+              >
+                Open the posting
+                <ExternalLink className="size-4" aria-hidden />
+              </a>
+              <CopyLink url={postingUrl} />
+            </>
+          )}
           {job.manual && (
             <button
               type="button"

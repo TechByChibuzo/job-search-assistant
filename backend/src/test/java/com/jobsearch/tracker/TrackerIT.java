@@ -181,6 +181,22 @@ class TrackerIT {
         mvc.perform(get("/api/contacts/" + id)).andExpect(status().isNotFound());
     }
 
+    @Test
+    void refusesProfileLinksThatAreNotWebLinks() throws Exception {
+        for (String bad : new String[] {"javascript:alert(document.cookie)", "data:text/html,hi", "www.linkedin.com/in/x"}) {
+            mvc.perform(post("/api/contacts").contentType(MediaType.APPLICATION_JSON)
+                            .content(json("companyName", "Microsoft", "name", "Eve", "linkedinUrl", bad)))
+                    .andExpect(status().isBadRequest());
+        }
+        long id = addContact("Microsoft", "Alan Turing", "OTHER");
+        mvc.perform(patch("/api/contacts/" + id).contentType(MediaType.APPLICATION_JSON)
+                        .content(json("linkedinUrl", "JavaScript:alert(1)")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/contacts").contentType(MediaType.APPLICATION_JSON)
+                        .content(json("companyName", "Microsoft", "name", "Eve", "email", "not-an-email")))
+                .andExpect(status().isBadRequest());
+    }
+
     private long pasteRole(String url, String title, String company) throws Exception {
         String body = mvc.perform(post("/api/jobs").contentType(MediaType.APPLICATION_JSON)
                         .content(json("url", url, "title", title, "company", company, "location", "Redmond, WA")))
