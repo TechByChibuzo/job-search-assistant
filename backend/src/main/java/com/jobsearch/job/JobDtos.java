@@ -28,7 +28,9 @@ final class JobDtos {
             Instant firstSeenAt,
             boolean isNew,
             boolean open,
-            boolean manual) {
+            boolean manual,
+            Integer matchScore,
+            String matchSummary) {
 
         static JobSummary of(Job job, Instant newSince) {
             return new JobSummary(
@@ -45,7 +47,9 @@ final class JobDtos {
                     job.getFirstSeenAt(),
                     job.isNewSince(newSince),
                     job.isOpen(),
-                    job.isManual());
+                    job.isManual(),
+                    job.getMatchScore(),
+                    job.getMatchSummary());
         }
     }
 
@@ -74,10 +78,18 @@ final class JobDtos {
 
     record CompanyNew(Long companyId, String companyName, long newJobs) {}
 
-    record JobDetail(JobSummary summary, String description, Instant lastSeenAt, Instant closedAt) {
+    record JobDetail(
+            JobSummary summary,
+            String description,
+            Instant lastSeenAt,
+            Instant closedAt,
+            List<String> matchStrengths,
+            List<String> matchGaps,
+            Instant matchedAt) {
 
         static JobDetail of(Job job, Instant newSince) {
-            return new JobDetail(JobSummary.of(job, newSince), job.getDescription(), job.getLastSeenAt(), job.getClosedAt());
+            return new JobDetail(JobSummary.of(job, newSince), job.getDescription(), job.getLastSeenAt(), job.getClosedAt(),
+                    job.getMatchStrengths(), job.getMatchGaps(), job.getMatchedAt());
         }
     }
 }

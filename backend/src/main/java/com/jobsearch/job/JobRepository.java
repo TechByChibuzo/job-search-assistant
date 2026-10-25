@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -17,6 +18,14 @@ interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecut
     List<Job> findByCompanyId(Long companyId);
 
     Optional<Job> findFirstByUrl(String url);
+
+    /** Open roles first seen since {@code since}, not part of a first import, not yet scored: most recent first. */
+    @EntityGraph(attributePaths = "company")
+    @Query("""
+            select j from Job j
+            where j.closedAt is null and j.baseline = false and j.matchScore is null and j.firstSeenAt > :since
+            order by coalesce(j.postedAt, j.firstSeenAt) desc, j.id desc""")
+    List<Job> findUnscoredSince(Instant since, Limit limit);
 
     /** Loads the company with each job, so listing a page doesn't run one query per row. */
     @Override

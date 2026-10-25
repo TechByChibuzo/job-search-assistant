@@ -1,6 +1,7 @@
 package com.jobsearch.job;
 
 import java.time.Instant;
+import java.util.List;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -67,6 +68,20 @@ public class Job {
     /** Added by pasting a link: no feed lists it, so a sync never closes it. */
     private boolean manual;
 
+    /** How well the role fits the resume, 0 to 100, as judged by Claude; null until scored. */
+    private Integer matchScore;
+
+    private String matchSummary;
+
+    /** Newline-separated short phrases. */
+    private String matchStrengths;
+
+    private String matchGaps;
+
+    private String matchModel;
+
+    private Instant matchedAt;
+
     protected Job() {}
 
     Job(Company company, FetchedJob fetched, Instant now, boolean baseline) {
@@ -121,6 +136,43 @@ public class Job {
             return postedAt;
         }
         return baseline ? null : firstSeenAt;
+    }
+
+    void recordMatch(int score, String summary, List<String> strengths, List<String> gaps, String model, Instant at) {
+        this.matchScore = Math.max(0, Math.min(100, score));
+        this.matchSummary = summary;
+        this.matchStrengths = String.join("\n", strengths);
+        this.matchGaps = String.join("\n", gaps);
+        this.matchModel = model;
+        this.matchedAt = at;
+    }
+
+    public Integer getMatchScore() {
+        return matchScore;
+    }
+
+    public String getMatchSummary() {
+        return matchSummary;
+    }
+
+    public List<String> getMatchStrengths() {
+        return lines(matchStrengths);
+    }
+
+    public List<String> getMatchGaps() {
+        return lines(matchGaps);
+    }
+
+    public String getMatchModel() {
+        return matchModel;
+    }
+
+    public Instant getMatchedAt() {
+        return matchedAt;
+    }
+
+    private static List<String> lines(String s) {
+        return s == null || s.isBlank() ? List.of() : List.of(s.split("\n"));
     }
 
     public boolean isOpen() {

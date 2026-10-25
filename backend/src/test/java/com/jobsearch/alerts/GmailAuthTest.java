@@ -40,7 +40,7 @@ class GmailAuthTest {
         RestClient.Builder builder = RestClient.builder();
         google = MockRestServiceServer.bindTo(builder).build();
         var gmail = new AppProperties.Gmail("client-1", "secret-1", "http://localhost:8081/api/gmail/callback", "Job alerts");
-        var properties = new AppProperties(null, null, null, null, null, gmail);
+        var properties = new AppProperties(null, null, null, null, null, gmail, null);
         auth = new GmailAuth(properties, accounts, builder, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 

@@ -64,11 +64,13 @@ class JobController {
             @RequestParam(defaultValue = "false") boolean newOnly,
             @RequestParam(defaultValue = "false") boolean includeClosed,
             @RequestParam(defaultValue = "false") boolean includeOlder,
+            @RequestParam(defaultValue = "newest") String sort,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "50") @Min(1) @Max(200) int size) {
         Instant newSince = newSince();
         Instant postedSince = includeOlder ? null : clock.instant().minus(properties.jobs().maxAge());
-        var filter = new JobFilter(q, companyId, workplace, location, newOnly ? newSince : null, postedSince, includeClosed);
+        var filter = new JobFilter(q, companyId, workplace, location, newOnly ? newSince : null, postedSince, includeClosed,
+                "fit".equalsIgnoreCase(sort));
         var results = jobs.findAll(filter.toSpecification(), PageRequest.of(page, size));
         return PageResponse.of(results, job -> JobSummary.of(job, newSince));
     }

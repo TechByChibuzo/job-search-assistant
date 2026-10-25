@@ -100,7 +100,7 @@ class GmailController {
         if (!auth.account().isPresent()) {
             throw new BadRequestException("Connect Gmail first.");
         }
-        return runner.startFeed(AlertImporter.NAME);
+        return runner.startStep(AlertImporter.NAME);
     }
 
     @DeleteMapping

@@ -20,6 +20,7 @@ import com.jobsearch.job.source.Workplace;
  * @param newSince      only new jobs: first seen after this instant, and not part of a first import
  * @param postedSince   hide jobs posted before this (or first seen before it, when the feed has no date)
  * @param includeClosed also list jobs that have left the feed
+ * @param bestFitFirst  order by match score, highest first, unscored roles last; otherwise newest first
  */
 record JobFilter(
         String q,
@@ -28,7 +29,8 @@ record JobFilter(
         String location,
         Instant newSince,
         Instant postedSince,
-        boolean includeClosed) {
+        boolean includeClosed,
+        boolean bestFitFirst) {
 
     Specification<Job> toSpecification() {
         return (root, query, cb) -> {
@@ -67,7 +69,12 @@ record JobFilter(
                 Expression<Instant> undated = cb.<Instant>selectCase()
                         .when(cb.isTrue(root.get("baseline")), cb.literal(Instant.EPOCH))
                         .otherwise(root.<Instant>get("firstSeenAt"));
-                query.orderBy(cb.desc(cb.coalesce(root.<Instant>get("postedAt"), undated)), cb.desc(root.get("id")));
+                var listed = cb.desc(cb.coalesce(root.<Instant>get("postedAt"), undated));
+                if (bestFitFirst) {
+                    query.orderBy(cb.desc(cb.coalesce(root.<Integer>get("matchScore"), -1)), listed, cb.desc(root.get("id")));
+                } else {
+                    query.orderBy(listed, cb.desc(root.get("id")));
+                }
             }
             return cb.and(where.toArray(Predicate[]::new));
         };

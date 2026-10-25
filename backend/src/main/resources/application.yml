@@ -64,3 +64,11 @@ app:
     redirect-uri: ${GMAIL_REDIRECT_URI:http://localhost:8081/api/gmail/callback}
     # The Gmail label job-alert emails are filed under
     label: ${GMAIL_LABEL:Job alerts}
+  ai:
+    # Claude, for match scores and drafted messages. Empty key turns the feature off.
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: ${AI_MODEL:claude-opus-5-5}
+    # New roles scored automatically after each daily sync; each one is a paid API call
+    daily-limit: ${AI_DAILY_LIMIT:30}
+    # Where the resume lives (git-ignored). The newest .pdf, .md or .txt file is used.
+    resume-dir: ${RESUME_DIR:../private}

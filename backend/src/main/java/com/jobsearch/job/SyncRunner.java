@@ -31,7 +31,7 @@ public class SyncRunner {
     private static final Logger log = LoggerFactory.getLogger(SyncRunner.class);
 
     private final JobSyncService sync;
-    private final List<ExtraFeed> extraFeeds;
+    private final List<SyncStep> steps;
     private final Clock clock;
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "job-sync");
@@ -41,9 +41,9 @@ public class SyncRunner {
 
     private volatile SyncProgress state = SyncProgress.idle();
 
-    SyncRunner(JobSyncService sync, List<ExtraFeed> extraFeeds, Clock clock) {
+    SyncRunner(JobSyncService sync, List<SyncStep> steps, Clock clock) {
         this.sync = sync;
-        this.extraFeeds = extraFeeds;
+        this.steps = steps;
         this.clock = clock;
     }
 
@@ -74,17 +74,17 @@ public class SyncRunner {
         return state;
     }
 
-    /** Runs one extra feed on its own, such as reading job-alert emails now. */
-    public synchronized SyncProgress startFeed(String name) {
-        ExtraFeed feed = extraFeeds.stream().filter(f -> f.name().equals(name)).findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("No feed named " + name));
+    /** Runs one step on its own, such as reading job-alert emails now. */
+    public synchronized SyncProgress startStep(String name) {
+        SyncStep step = steps.stream().filter(f -> f.name().equals(name)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No step named " + name));
         if (state.running()) {
             throw new ConflictException("A sync is already running.");
         }
         state = SyncProgress.started(clock.instant());
         executor.submit(() -> {
             try {
-                runFeed(feed);
+                runStep(step);
                 update(s -> s.finish(clock.instant(), null));
             } catch (RuntimeException e) {
                 update(s -> s.finish(clock.instant(), e.getMessage()));
@@ -109,24 +109,24 @@ public class SyncRunner {
         }
     }
 
-    /** Every company, then every extra feed that is set up, each reported as it finishes. */
+    /** Every company, then every step that is set up, each reported as it finishes. */
     private void runAll(Tracker tracker) {
         sync.syncAll(tracker);
-        for (ExtraFeed feed : extraFeeds) {
-            if (feed.enabled()) {
-                runFeed(feed);
+        for (SyncStep step : steps) {
+            if (step.enabled()) {
+                runStep(step);
             }
         }
     }
 
-    private void runFeed(ExtraFeed feed) {
-        update(s -> s.at(feed.name(), s.done(), s.total() + 1));
+    private void runStep(SyncStep step) {
+        update(s -> s.at(step.name(), s.done(), s.total() + 1));
         SyncResult result;
         try {
-            result = feed.run();
+            result = step.run();
         } catch (RuntimeException e) {
-            log.warn("{} failed", feed.name(), e);
-            result = SyncResult.failed(null, feed.name(), SyncStatus.FAILED, e.getMessage());
+            log.warn("{} failed", step.name(), e);
+            result = SyncResult.failed(null, step.name(), SyncStatus.FAILED, e.getMessage());
         }
         SyncResult done = result;
         update(s -> s.with(done));

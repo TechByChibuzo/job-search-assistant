@@ -11,7 +11,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.jobsearch.company.SyncStatus;
 import com.jobsearch.config.AppProperties;
-import com.jobsearch.job.ExtraFeed;
+import com.jobsearch.job.SyncStep;
 import com.jobsearch.job.ManualJobService;
 import com.jobsearch.job.SyncResult;
 import com.jobsearch.job.source.Region;
@@ -21,7 +21,7 @@ import com.jobsearch.job.source.Region;
  * feed in the daily sync. Each email is read once; roles outside the US are skipped like any other.
  */
 @Component
-class AlertImporter implements ExtraFeed {
+class AlertImporter implements SyncStep {
 
     static final String NAME = "Job alert emails";
     private static final Logger log = LoggerFactory.getLogger(AlertImporter.class);

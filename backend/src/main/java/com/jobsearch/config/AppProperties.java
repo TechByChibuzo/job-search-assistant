@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("app")
-public record AppProperties(Cors cors, Http http, Sync sync, Jobs jobs, Tracker tracker, Gmail gmail) {
+public record AppProperties(Cors cors, Http http, Sync sync, Jobs jobs, Tracker tracker, Gmail gmail, Ai ai) {
 
     public record Cors(List<String> allowedOrigins) {}
 
@@ -25,6 +25,19 @@ public record AppProperties(Cors cors, Http http, Sync sync, Jobs jobs, Tracker 
 
     /** @param followUpAfter how long after a message with no reply to suggest following up */
     public record Tracker(Duration followUpAfter) {}
+
+    /**
+     * Claude, for match scores and drafted messages. Off until an API key is set.
+     *
+     * @param dailyLimit how many new roles the daily sync scores at most
+     * @param resumeDir  the folder holding the resume
+     */
+    public record Ai(String apiKey, String model, int dailyLimit, String resumeDir) {
+
+        public boolean configured() {
+            return apiKey != null && !apiKey.isBlank();
+        }
+    }
 
     /** Reading job-alert emails from the owner's Gmail, read-only. Off until a client id is set. */
     public record Gmail(String clientId, String clientSecret, String redirectUri, String label) {
