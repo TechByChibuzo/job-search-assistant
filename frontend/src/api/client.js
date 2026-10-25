@@ -6,10 +6,20 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Every request that changes data carries this header. Other sites can't add it without the API's
+ * permission, which it never gives, so they can't trigger changes through your browser (CSRF).
+ */
+const APP_HEADER = { 'X-Requested-With': 'job-search-assistant' }
+
 export async function api(path, { method = 'GET', body } = {}) {
+  const headers = {
+    ...(method === 'GET' ? {} : APP_HEADER),
+    ...(body ? { 'Content-Type': 'application/json' } : {}),
+  }
   const response = await fetch(`/api${path}`, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   })
   if (response.status === 204) return null

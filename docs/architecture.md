@@ -373,7 +373,7 @@ flowchart LR
 - **Structured output.** Both requests ask for JSON matching a schema (`output_config.format`), so answers are parsed, not scraped from prose. Scores are clamped to 0 to 100 regardless.
 - **Prompt injection.** Job postings come from the open web. They are wrapped in `<job_posting>` tags and the system prompt says to treat them as information, never instructions; the output is a schema-constrained JSON object the app reads field by field, so a hostile posting can at worst skew its own score.
 - **Refusals and failures.** Requests opt into server-side fallbacks (`fallbacks: "default"`), and a remaining refusal, a bad key, rate limiting or an outage becomes a plain message in the interface (HTTP 503 with the reason), never a silent failure. The daily step counts failures and carries on.
-- **Cost control.** The system prompt and resume come first with a one-hour cache breakpoint, so a batch of scores reuses that prefix. Scoring uses low effort; drafting medium. The model is `AI_MODEL` (default Claude Opus 5.5); a smaller model such as Claude Haiku 5.5 cuts the cost by roughly 40 times at some loss of judgement.
+- **Cost control.** A hard daily cap on Claude requests of any kind (`AI_REQUEST_CAP`, 150), on top of the daily scoring limit, so neither a bug nor abuse can run up the bill. The system prompt and resume come first with a one-hour cache breakpoint, so a batch of scores reuses that prefix. Scoring uses low effort; drafting medium. The model is `AI_MODEL` (default Claude Opus 5.5); a smaller model such as Claude Haiku 5.5 cuts the cost by roughly 40 times at some loss of judgement.
 - **Behind an interface.** `Claude` is an interface with one implementation using the official Java SDK, so tests run against a fake and a local stub of the Messages API, never the real one. See [ADR 0003](adr/0003-ai-provider-abstraction.md).
 
 ## 10. Browser extension (phase 5)
@@ -385,7 +385,7 @@ flowchart LR
 
 | Concern | Approach |
 |---|---|
-| Security | One user on localhost. The API binds to `127.0.0.1` and has no login. The web app reaches it through the same origin (Vite proxy in development, nginx in Docker), so CORS is only a fallback. nginx sends a Content Security Policy and the usual hardening headers. Hosting it means adding auth first: see section 12. |
+| Security | One user on localhost. The API binds to `127.0.0.1` and has no login. The web app reaches it through the same origin (Vite proxy in development, nginx in Docker). Because a page on another site could still make the browser send a plain POST to localhost, every request that changes data must carry an `X-Requested-With` header the app adds; another site can only add it after a CORS preflight, which the API refuses for any origin but its own (CSRF protection without sessions). nginx sends a Content Security Policy and the usual hardening headers. Hosting it means adding auth first: see section 12. |
 | Personal data | The resume and answer bank live in `private/`, which git ignores. Nothing personal is committed. |
 | Errors | One `@RestControllerAdvice` returns RFC 7807 problem details. Sync failures are stored per company, not thrown at the scheduler. |
 | Politeness | A descriptive `User-Agent`, timeouts, a delay between pages, a page cap, and one sync a day. No source that needs a login, token or bot check is read. |

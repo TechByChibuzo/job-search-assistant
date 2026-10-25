@@ -31,8 +31,9 @@ public record AppProperties(Cors cors, Http http, Sync sync, Jobs jobs, Tracker 
      *
      * @param dailyLimit how many new roles the daily sync scores at most
      * @param resumeDir  the folder holding the resume
+     * @param requestCap the most Claude requests of any kind in one day
      */
-    public record Ai(String apiKey, String model, int dailyLimit, String resumeDir) {
+    public record Ai(String apiKey, String model, int dailyLimit, String resumeDir, int requestCap) {
 
         public boolean configured() {
             return apiKey != null && !apiKey.isBlank();

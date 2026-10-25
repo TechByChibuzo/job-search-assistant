@@ -44,9 +44,10 @@ class AnthropicClaudeTest {
             exchange.close();
         });
         server.start();
-        var ai = new AppProperties.Ai("test-key", "claude-opus-5-5", 30, ".");
+        var ai = new AppProperties.Ai("test-key", "claude-opus-5-5", 30, ".", 150);
         var properties = new AppProperties(null, null, null, null, null, null, ai);
-        claude = new AnthropicClaude(properties, json, "http://127.0.0.1:" + server.getAddress().getPort());
+        claude = new AnthropicClaude(properties, json, new AiBudget(properties, java.time.Clock.systemUTC()),
+                "http://127.0.0.1:" + server.getAddress().getPort());
     }
 
     @AfterEach
@@ -114,8 +115,8 @@ class AnthropicClaudeTest {
 
     @Test
     void refusesToRunWithoutAKey() {
-        var properties = new AppProperties(null, null, null, null, null, null, new AppProperties.Ai("", "m", 30, "."));
-        var unset = new AnthropicClaude(properties, json, "http://127.0.0.1:1");
+        var properties = new AppProperties(null, null, null, null, null, null, new AppProperties.Ai("", "m", 30, ".", 150));
+        var unset = new AnthropicClaude(properties, json, new AiBudget(properties, java.time.Clock.systemUTC()), "http://127.0.0.1:1");
 
         assertThat(unset.configured()).isFalse();
         assertThatThrownBy(() -> unset.ask("s", textResume(), "r", Map.of(), Claude.Effort.LOW))

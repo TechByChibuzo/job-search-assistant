@@ -18,7 +18,7 @@ class ResumeStoreTest {
     Path dir;
 
     private ResumeStore store() {
-        return new ResumeStore(new AppProperties(null, null, null, null, null, null, new AppProperties.Ai("", "m", 30, dir.toString())));
+        return new ResumeStore(new AppProperties(null, null, null, null, null, null, new AppProperties.Ai("", "m", 30, dir.toString(), 150)));
     }
 
     @Test

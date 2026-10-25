@@ -48,18 +48,20 @@ class AnthropicClaude implements Claude {
 
     private final AppProperties.Ai config;
     private final ObjectMapper json;
+    private final AiBudget budget;
     /** Null for Anthropic's API; tests point it at a local stub. */
     private final String baseUrl;
     private volatile AnthropicClient client;
 
     @Autowired
-    AnthropicClaude(AppProperties properties, ObjectMapper json) {
-        this(properties, json, null);
+    AnthropicClaude(AppProperties properties, ObjectMapper json, AiBudget budget) {
+        this(properties, json, budget, null);
     }
 
-    AnthropicClaude(AppProperties properties, ObjectMapper json, String baseUrl) {
+    AnthropicClaude(AppProperties properties, ObjectMapper json, AiBudget budget, String baseUrl) {
         this.config = properties.ai();
         this.json = json;
+        this.budget = budget;
         this.baseUrl = baseUrl;
     }
 
@@ -78,6 +80,7 @@ class AnthropicClaude implements Claude {
         if (!configured()) {
             throw new AiException("Claude isn't set up: add ANTHROPIC_API_KEY to .env and restart the app.");
         }
+        budget.spend();
         MessageCreateParams params = MessageCreateParams.builder()
                 .model(config.model())
                 .maxTokens(MAX_TOKENS)

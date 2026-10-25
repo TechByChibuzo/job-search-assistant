@@ -70,5 +70,7 @@ app:
     model: ${AI_MODEL:claude-opus-5-5}
     # New roles scored automatically after each daily sync; each one is a paid API call
     daily-limit: ${AI_DAILY_LIMIT:30}
+    # Hard ceiling on Claude requests per day of any kind (scores and drafts), against runaway spending
+    request-cap: ${AI_REQUEST_CAP:150}
     # Where the resume lives (git-ignored). The newest .pdf, .md or .txt file is used.
     resume-dir: ${RESUME_DIR:../private}

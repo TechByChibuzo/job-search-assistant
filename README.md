@@ -97,6 +97,7 @@ cd frontend && npm test && npm run lint
 | `ANTHROPIC_API_KEY` | none | Claude, for match scores and drafts; put it in `.env` |
 | `AI_MODEL` | `claude-opus-5-5` | Which Claude model to use |
 | `AI_DAILY_LIMIT` | `30` | New roles scored automatically after each daily sync |
+| `AI_REQUEST_CAP` | `150` | Hard ceiling on Claude requests per day of any kind |
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | local Postgres | Database |
 
 ### API

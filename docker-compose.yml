@@ -34,6 +34,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       AI_MODEL: ${AI_MODEL:-claude-opus-5-5}
       AI_DAILY_LIMIT: ${AI_DAILY_LIMIT:-30}
+      AI_REQUEST_CAP: ${AI_REQUEST_CAP:-150}
       RESUME_DIR: /app/private
     volumes:
       # The resume, read-only; private/ is git-ignored
