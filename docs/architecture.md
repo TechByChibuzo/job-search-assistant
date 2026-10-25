@@ -66,9 +66,9 @@ The API is the only thing that talks to the outside world, and it only reads fro
 | `backend/` | Java 21, Spring Boot 3.5, JPA, Flyway, jsoup | REST API, job sources, background sync, tracker, AI calls |
 | `frontend/` | React 19, Vite, Tailwind CSS 4, TanStack Query, lucide icons | Inbox, tracker board, people, companies |
 | Postgres 16 | Docker Compose | All state |
-| Browser extension | Chrome MV3, unpacked | Save a viewed profile; fill application forms (phase 4) |
+| `extension/` | Chrome MV3, plain JavaScript, unpacked | Save a viewed profile or role; fill application forms; record applications |
 
-The backend is organised **by feature** rather than by layer (`company`, `job`, `job.source`, `contact`, `tracker`, `alerts`, `ai`), so each feature's entity, repository, service and controller sit together. See [ADR 0002](adr/0002-package-by-feature.md).
+The backend is organised **by feature** rather than by layer (`company`, `job`, `job.source`, `contact`, `tracker`, `alerts`, `ai`, `profile`), so each feature's entity, repository, service and controller sit together. See [ADR 0002](adr/0002-package-by-feature.md).
 
 ## 5. Job ingestion
 
@@ -377,10 +377,45 @@ flowchart LR
 - **Cost control.** A hard daily cap on Claude requests of any kind (`AI_REQUEST_CAP`, 150), on top of the daily scoring limit, so neither a bug nor abuse can run up the bill. The system prompt and resume come first with a one-hour cache breakpoint, so a batch of scores reuses that prefix. Scoring uses low effort; drafting medium. The model is `AI_MODEL` (default Claude Opus 5.5); a smaller model such as Claude Haiku 5.5 cuts the cost by roughly 40 times at some loss of judgement.
 - **Behind an interface.** `Claude` is an interface with one implementation using the official Java SDK, so tests run against a fake and a local stub of the Messages API, never the real one. See [ADR 0003](adr/0003-ai-provider-abstraction.md).
 
-## 10. Browser extension (phase 5)
+## 10. Browser extension
 
-- **Save profile:** on a profile page the owner is viewing, one click sends name, title, company and URL to `POST /api/contacts`. It reads only the current page, only on click.
-- **Fill applications:** on Greenhouse, Lever, Ashby and Workday application pages it fills contact details, links, history, the resume upload and drafted answers from the answer bank. It never clicks submit, and it leaves attestation questions (work authorization, sponsorship, EEO, background checks) for the owner.
+A Chrome extension (Manifest V3, `extension/`) connects the pages the owner visits to the app. It is loaded unpacked; see [extension/README.md](../extension/README.md).
+
+```mermaid
+sequenceDiagram
+    participant O as Owner
+    participant P as Popup
+    participant T as Current tab
+    participant A as App API (localhost)
+    O->>P: clicks the extension
+    P->>T: inject reader or filler (activeTab), run once
+    alt LinkedIn profile
+        T-->>P: name, title, company, profile link
+        O->>P: checks, picks who they are, Save person
+        P->>A: POST /api/contacts
+    else LinkedIn job
+        T-->>P: title, company, location, link
+        P->>A: POST /api/jobs
+    else Application form
+        P->>A: GET /api/profile, GET /api/profile/resume
+        P->>T: fill(profile, resume)
+        T-->>P: filled, left for the owner, resume attached
+        O->>T: checks, answers the rest, submits
+        O->>P: I submitted it
+        P->>A: POST /api/applications
+    end
+```
+
+- **Only on click.** Permissions are `activeTab`, `scripting` and `storage`; there are no content scripts that run on their own and no host access to LinkedIn or job sites. The page is read once, when the owner clicks, which is what copying from the screen would do. Nothing on LinkedIn is navigated, clicked or sent.
+- **Reading LinkedIn:** the profile's name, headline, current company and link; a job's title, company, location and link. Selectors fall back to the tab title, and the owner checks every field before saving.
+- **Filling forms:** text fields are matched to the profile by `autocomplete`, label, placeholder and field names (camelCase and underscores split into words, so Workday's `addressSection_city` reads as "city"). Values are set through the native setter and the events typing fires, so React forms (Workday, Ashby) notice. Filled fields are outlined in green.
+- **What it never touches:** questions matching work authorization, sponsorship, visa, EEO (gender, race, veteran, disability, pronouns), consent, certification or salary are outlined in amber and listed by question, never by option. Choices, checkboxes and long answers are left alone, nothing already typed is overwritten, and nothing is submitted.
+- **The resume** is fetched from the app (`GET /api/profile/resume`, `no-store`) and attached to the upload that looks like the resume, never the cover letter.
+- **Recording the application** finds the role from the page's link (the posting link once `/apply` and the query are stripped, or a role whose id appears in it) or saves it as a hand-added role, tracks it, and sets it to Applied with the date and the resume file name.
+- **Talking to the app.** The extension's id is pinned by a public key in the manifest, the API's CORS allows exactly that origin, and its requests carry the same CSRF header as the web app.
+- **Tested** against sample Greenhouse-, Lever- and Workday-style forms and a real Lever form, recorded with scripts removed.
+
+The applicant profile (`applicant_profile`, one row) holds contact details, links, the current role and education; the app's **Profile** page edits it and can prefill it from the resume with Claude. Legal attestations are never stored.
 
 ## 11. Cross-cutting concerns
 
@@ -421,5 +456,5 @@ Today the app runs on one machine. It is built so that hosting it later is a con
 | 2 | Tracker: roles by stage, people, conversations with follow-up reminders, paste-a-job-link | Done |
 | 3 | Job-alert email import from a silent Gmail label (Microsoft, Meta, Apple, LinkedIn-only roles) | Done; parsers to be tuned on real alerts |
 | 4 | AI match scores, best-fit sort, drafted connection notes, messages and follow-ups | Done |
-| 5 | Browser extension: save profile, fill applications | Planned |
+| 5 | Browser extension: save a viewed profile or role, fill applications, record them; applicant profile | Done |
 | 6 | Tailored resumes and cover letters, answer bank, reply-rate stats | Planned |

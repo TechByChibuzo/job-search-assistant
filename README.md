@@ -16,6 +16,7 @@ Then it keeps track of the referral hunt itself: the roles I'm pursuing, the peo
 - **A tracker for the referral hunt.** Track a role and record each message you send; the app reminds you to follow up after 5 days of silence and moves the role along as people reply and refer you (Saved → Reaching out → Referred → Applied → Interviewing → Offer). A People page keeps everyone you've talked to and where each conversation stands.
 - **Roles from anywhere.** Paste a link from LinkedIn or any careers site to add a role the app can't sync. If the link is on a board it can read, it offers to track the whole company.
 - **Your fit, at a glance.** Claude reads each new role against your resume and scores it from 0 to 100, with what matches and what's missing; the inbox can sort by best fit. It also drafts LinkedIn connection notes, messages and follow-ups from facts on your resume, for you to edit and send.
+- **A browser extension.** On a LinkedIn profile, one click saves the person to your People list; on a LinkedIn job, it adds the role. On an application form (Greenhouse, Lever, Ashby, Workday), it fills your details from your Profile and attaches your resume, leaves work-authorization, sponsorship and EEO questions for you, and never submits. After you submit, it records the application in the tracker. [Install](extension/README.md).
 - **Job-alert emails, silently.** For sites that can't be read (Microsoft, Meta, Apple) and LinkedIn-only roles, the app reads job-alert emails from a Gmail label each morning, read-only, and adds their roles to the inbox. A Gmail filter keeps the alerts out of your inbox, so they never buzz. [Setup guide](docs/gmail-setup.md).
 
 On a real run it kept about 1,460 relevant US roles from eight companies, including 654 software roles from Amazon, 305 from Google, 138 from Nvidia and 161 from Bloomberg.
@@ -33,7 +34,6 @@ On a real run it kept about 1,460 relevant US roles from eight companies, includ
 
 | Phase | Scope |
 |---|---|
-| 5 | Browser extension: save the profile I'm viewing; fill application forms (I always press submit) |
 | 6 | Tailored resumes and cover letters, a reusable answer bank, reply-rate stats |
 
 ## How it's built
@@ -46,8 +46,9 @@ flowchart LR
 ```
 
 - **Backend:** Java 21, Spring Boot 3.5, Spring Data JPA, Flyway, `RestClient`, jsoup, the Gmail API with Google OAuth, and Claude through the Anthropic Java SDK. Organised by feature (`company`, `job`, `job.source`, `contact`, `tracker`, `alerts`, `ai`). Each site is one class behind a `JobSource` interface.
+- **Extension:** Chrome Manifest V3 in plain JavaScript, with only `activeTab` access; the page reader and form filler are tested against sample pages and a real Lever form.
 - **Frontend:** React 19, Vite, Tailwind CSS 4, TanStack Query, lucide icons. Filters and the open role live in the URL, so any view can be bookmarked. Light and dark themes.
-- **Tests:** 280 in total. Every site source is tested against a trimmed copy of a real response, and the alert parsers against sample emails; the sync and the REST API run against real Postgres via Testcontainers; UI components are tested with Vitest and Testing Library. CI runs everything on every push.
+- **Tests:** 303 in total. Every site source is tested against a trimmed copy of a real response, and the alert parsers against sample emails; the sync and the REST API run against real Postgres via Testcontainers; UI components are tested with Vitest and Testing Library. CI runs everything on every push.
 
 The full design, with diagrams of the sync, the data model, the deployment path and the roadmap, is in [docs/architecture.md](docs/architecture.md). The decisions with real trade-offs are in [docs/adr](docs/adr).
 
@@ -125,5 +126,9 @@ cd frontend && npm test && npm run lint
 | `GET` | `/api/ai` | Whether Claude is set up, and which resume it reads |
 | `POST` | `/api/jobs/{id}/match` | Score one role against the resume |
 | `POST` | `/api/drafts` | Draft a connection note, message or follow-up |
+| `GET` `PUT` | `/api/profile` | Your details for application forms |
+| `POST` | `/api/profile/from-resume` | Claude's reading of your resume, to review before saving |
+| `GET` | `/api/profile/resume` | The resume file, for the extension to attach |
+| `POST` | `/api/applications` | Record an application: tracks the role as Applied |
 
 Errors are RFC 7807 problem details.
