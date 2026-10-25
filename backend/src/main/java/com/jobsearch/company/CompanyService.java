@@ -27,9 +27,24 @@ public class CompanyService {
         return companies.findAllByOrderByNameAsc();
     }
 
+    /** Companies the daily sync reads: active, and not added by hand. */
     @Transactional(readOnly = true)
     public List<Company> listActive() {
-        return companies.findByActiveTrueOrderByNameAsc();
+        return companies.findByActiveTrueAndAtsNotOrderByNameAsc(AtsType.MANUAL);
+    }
+
+    /**
+     * The company a hand-added role belongs to: an existing one with that name, whatever its source, or a
+     * new company marked as added by hand.
+     */
+    @Transactional
+    public Company findOrCreateManual(String name) {
+        String clean = name.strip();
+        return companies.findFirstByNameIgnoreCase(clean).orElseGet(() -> {
+            DetectedBoard board = detector.normalize(AtsType.MANUAL, clean)
+                    .orElseThrow(() -> new BadRequestException("'" + clean + "' isn't a usable company name"));
+            return companies.save(new Company(clean, board, null));
+        });
     }
 
     @Transactional(readOnly = true)

@@ -166,7 +166,8 @@ class ApiIT {
                 .andExpect(jsonPath("$.newJobs").value(1))
                 .andExpect(jsonPath("$.byCompany[0].companyName").value("Acme"))
                 .andExpect(jsonPath("$.maxAgeDays").value(30))
-                .andExpect(jsonPath("$.usOnly").value(true));
+                .andExpect(jsonPath("$.usOnly").value(true))
+                .andExpect(jsonPath("$.followUpDays").value(5));
     }
 
     @Test

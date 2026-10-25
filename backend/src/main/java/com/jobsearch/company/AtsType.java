@@ -13,7 +13,9 @@ public enum AtsType {
     AVATURE(null),
     AMAZON("Amazon"),
     GOOGLE("Google"),
-    GOLDMAN("Goldman Sachs");
+    GOLDMAN("Goldman Sachs"),
+    /** Roles added by pasting a link, for companies whose site can't be read. Never synced. */
+    MANUAL(null);
 
     private final String company;
 
@@ -29,5 +31,9 @@ public enum AtsType {
     /** Search-based sources return only what matches the company's search phrases, so phrases matter more there. */
     public boolean isSearchBased() {
         return this == WORKDAY || company != null;
+    }
+
+    public boolean isSyncable() {
+        return this != MANUAL;
     }
 }

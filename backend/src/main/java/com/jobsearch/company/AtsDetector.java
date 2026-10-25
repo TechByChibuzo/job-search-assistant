@@ -89,6 +89,10 @@ public class AtsDetector {
             case AMAZON -> Optional.of(new DetectedBoard(ats, "amazon"));
             case GOOGLE -> Optional.of(new DetectedBoard(ats, "google"));
             case GOLDMAN -> Optional.of(new DetectedBoard(ats, "goldman"));
+            case MANUAL -> {
+                String slug = b.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+                yield slug.isEmpty() ? Optional.empty() : Optional.of(new DetectedBoard(ats, slug));
+            }
         };
     }
 

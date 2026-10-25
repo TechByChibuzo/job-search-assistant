@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.jobsearch.common.BadRequestException;
 import com.jobsearch.common.ConflictException;
 import com.jobsearch.company.Company;
 import com.jobsearch.company.CompanyRepository;
@@ -107,6 +108,9 @@ public class JobSyncService {
 
     public SyncResult sync(long companyId, Progress progress) {
         Company company = companyService.get(companyId);
+        if (!company.getAts().isSyncable()) {
+            throw new BadRequestException(company.getName() + " was added by hand; there is no feed to sync.");
+        }
         return whileHoldingLock(() -> {
             progress.starting(company, 0, 1);
             SyncResult result = syncOne(company);
@@ -145,8 +149,11 @@ public class JobSyncService {
         Map<String, FetchedJob> incoming = new LinkedHashMap<>();
         fetched.jobs().forEach(f -> incoming.put(f.externalId(), f));
 
+        // Hand-added roles belong to the owner, not the feed
         Map<String, Job> stored = new HashMap<>();
-        jobs.findByCompanyId(companyId).forEach(j -> stored.put(j.getExternalId(), j));
+        jobs.findByCompanyId(companyId).stream()
+                .filter(j -> !j.isManual())
+                .forEach(j -> stored.put(j.getExternalId(), j));
         boolean firstImport = stored.isEmpty();
 
         int added = 0;

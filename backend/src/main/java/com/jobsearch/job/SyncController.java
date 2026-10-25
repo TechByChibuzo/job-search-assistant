@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.jobsearch.common.BadRequestException;
 import com.jobsearch.company.CompanyService;
 import com.jobsearch.job.SyncRunner.SyncProgress;
 
@@ -36,7 +37,10 @@ class SyncController {
     @PostMapping("/api/companies/{id}/sync")
     @ResponseStatus(HttpStatus.ACCEPTED)
     SyncProgress syncCompany(@PathVariable long id) {
-        companies.get(id); // 404 now, rather than a failed run later
+        // 404 or 400 now, rather than a failed run later
+        if (!companies.get(id).getAts().isSyncable()) {
+            throw new BadRequestException("This company was added by hand; there is no feed to sync.");
+        }
         return runner.start(id);
     }
 }

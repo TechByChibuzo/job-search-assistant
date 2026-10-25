@@ -64,6 +64,9 @@ public class Job {
      */
     private boolean baseline;
 
+    /** Added by pasting a link: no feed lists it, so a sync never closes it. */
+    private boolean manual;
+
     protected Job() {}
 
     Job(Company company, FetchedJob fetched, Instant now, boolean baseline) {
@@ -72,6 +75,13 @@ public class Job {
         this.firstSeenAt = now;
         this.baseline = baseline;
         apply(fetched, now);
+    }
+
+    /** A role added by hand: new as of now, and open until the owner closes it. */
+    static Job manual(Company company, FetchedJob fetched, Instant now) {
+        Job job = new Job(company, fetched, now, false);
+        job.manual = true;
+        return job;
     }
 
     /** Copies the latest feed data and marks the job as seen now, reopening it if it was closed. */
@@ -90,6 +100,11 @@ public class Job {
 
     void close(Instant now) {
         this.closedAt = now;
+    }
+
+    /** The owner closes or reopens a hand-added role; feed roles follow their feed. */
+    void setClosedByOwner(boolean closed, Instant now) {
+        this.closedAt = closed ? now : null;
     }
 
     /** New means first seen after {@code since}, and not part of a company's first import. */
@@ -142,6 +157,10 @@ public class Job {
 
     public Region getRegion() {
         return region;
+    }
+
+    public boolean isManual() {
+        return manual;
     }
 
     public boolean isBaseline() {

@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("app")
-public record AppProperties(Cors cors, Http http, Sync sync, Jobs jobs) {
+public record AppProperties(Cors cors, Http http, Sync sync, Jobs jobs, Tracker tracker) {
 
     public record Cors(List<String> allowedOrigins) {}
 
@@ -22,4 +22,7 @@ public record AppProperties(Cors cors, Http http, Sync sync, Jobs jobs) {
      * @param usOnly    only import roles in the United States
      */
     public record Jobs(Duration newWindow, Duration maxAge, boolean usOnly) {}
+
+    /** @param followUpAfter how long after a message with no reply to suggest following up */
+    public record Tracker(Duration followUpAfter) {}
 }

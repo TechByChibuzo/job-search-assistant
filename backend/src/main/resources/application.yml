@@ -53,3 +53,6 @@ app:
     # Roles posted longer ago than this aren't imported
     max-age: ${JOBS_MAX_AGE:30d}
     us-only: ${JOBS_US_ONLY:true}
+  tracker:
+    # When to remind the owner to follow up on a message with no reply
+    follow-up-after: ${FOLLOW_UP_AFTER:5d}

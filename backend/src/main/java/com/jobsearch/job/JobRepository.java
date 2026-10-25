@@ -16,6 +16,8 @@ interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecut
 
     List<Job> findByCompanyId(Long companyId);
 
+    Optional<Job> findFirstByUrl(String url);
+
     /** Loads the company with each job, so listing a page doesn't run one query per row. */
     @Override
     @EntityGraph(attributePaths = "company")
