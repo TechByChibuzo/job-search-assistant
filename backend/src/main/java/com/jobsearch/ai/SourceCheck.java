@@ -25,11 +25,47 @@ public final class SourceCheck {
     private final String resume;
     private final Set<String> resumeWords;
     private final Set<String> resumeNumbers;
+    /** Emails and web addresses as the resume writes them, lightly normalised (see {@link #linkKey}). */
+    private final Set<String> resumeLinks;
+
+    /** An email address, or a web address such as github.com/name, as a whole contact item. */
+    private static final Pattern LINK_ITEM = Pattern.compile(
+            "(?i)^(?:[^\\s@]+@[^\\s@]+\\.[^\\s@]+|(?:https?://)?(?:[\\w-]+\\.)+[a-z]{2,}(?:[/?#]\\S*)?)$");
+    private static final Pattern LINK_IN_TEXT = Pattern.compile(
+            "(?i)[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+|(?:https?://)?(?:[\\w-]+\\.)+[a-z]{2,}(?:[/?#][\\w\\-./%?=&#~]*)?");
 
     public SourceCheck(String resumeText) {
-        this.resume = normalize(resumeText == null ? "" : resumeText);
+        String raw = resumeText == null ? "" : resumeText;
+        this.resume = normalize(raw);
         this.resumeWords = new HashSet<>(Arrays.asList(resume.split(" ")));
-        this.resumeNumbers = numbers(resumeText == null ? "" : resumeText);
+        this.resumeNumbers = numbers(raw);
+        this.resumeLinks = new HashSet<>();
+        Matcher links = LINK_IN_TEXT.matcher(raw);
+        while (links.find()) {
+            resumeLinks.add(linkKey(links.group()));
+        }
+    }
+
+    /**
+     * Whether a contact item may go on the page. An email or web address becomes a link, so it must match one
+     * in the resume exactly (apart from case, the scheme, "www." and a trailing slash): word overlap isn't
+     * enough, since "janedoe.github.com" has the same words as "github.com/janedoe". Without resume text to
+     * compare, links are refused. Anything else (a phone number, a city) is shown as text and needs its words
+     * in the resume.
+     */
+    public boolean contactAllowed(String item) {
+        String text = item == null ? "" : item.strip();
+        if (LINK_ITEM.matcher(text).matches()) {
+            return available() && resumeLinks.contains(linkKey(text));
+        }
+        return mentions(text);
+    }
+
+    private static String linkKey(String link) {
+        return link.toLowerCase(Locale.ROOT).strip()
+                .replaceFirst("^https?://", "")
+                .replaceFirst("^www\\.", "")
+                .replaceFirst("[/.,;:)]+$", "");
     }
 
     /** Whether there is resume text to check against; a scanned PDF has none. */

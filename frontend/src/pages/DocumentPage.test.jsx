@@ -21,6 +21,7 @@ const resume = {
   content: {
     name: 'Sam Rivera',
     contact: ['555-0100', 'sam@example.com', 'github.com/samrivera'],
+    contactChecked: true,
     droppedSkills: ['Rust'],
     sections: [
       {
@@ -94,7 +95,9 @@ describe('DocumentPage', () => {
     renderPage()
 
     expect(await screen.findByText('2025')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'sam@example.com' })).toBeInTheDocument()
+    // Saved before contact details were checked, so they show as text, not links
+    expect(screen.getByText(/sam@example\.com/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'sam@example.com' })).not.toBeInTheDocument()
     expect(screen.getByText('Skills')).toBeInTheDocument()
   })
 

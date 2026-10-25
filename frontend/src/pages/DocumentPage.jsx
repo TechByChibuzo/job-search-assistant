@@ -48,7 +48,10 @@ function Rich({ text }) {
     .map((part, i) => (i % 2 ? <b key={i}>{part}</b> : part))
 }
 
-/** A contact item becomes a link when it is one: an email address, or a site such as github.com/name. */
+/**
+ * A contact item becomes a link when it is one (an email address, or a site such as github.com/name) and the app
+ * has checked it against the resume, so a link planted through a job posting can't end up clickable.
+ */
 function contactHref(item) {
   if (/^\S+@\S+\.\S+$/.test(item)) return `mailto:${item}`
   if (/^(https?:\/\/)?[\w-]+(\.[\w-]+)+\/\S*$/.test(item)) return item.startsWith('http') ? item : `https://${item}`
@@ -82,7 +85,7 @@ function Resume({ doc, editing, update }) {
         <h1>{c.name}</h1>
         <p>
           {c.contact.map((item, i) => {
-            const href = contactHref(item)
+            const href = c.contactChecked ? contactHref(item) : null
             return (
               <span key={i}>
                 {i > 0 && ' | '}

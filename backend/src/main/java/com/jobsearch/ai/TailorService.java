@@ -134,19 +134,22 @@ public class TailorService {
     JsonNode checkResume(JsonNode answer, SourceCheck check) {
         ObjectNode doc = answer.deepCopy();
         int flagged = 0;
-        // Contact items become links on the page, so one the resume doesn't have (a link planted through the
-        // posting, say) is dropped rather than flagged
+        // Contact items become links on the page, so one the resume doesn't have exactly (a link planted through
+        // the posting, say) is dropped rather than flagged
         ArrayNode contact = json.createArrayNode();
         List<String> unknownContact = new ArrayList<>();
         for (JsonNode item : doc.path("contact")) {
-            if (check.available() && !check.mentions(item.asText())) {
-                unknownContact.add(item.asText());
-            } else {
+            if (check.contactAllowed(item.asText())) {
                 contact.add(item);
+            } else {
+                unknownContact.add(item.asText());
             }
         }
         doc.set("contact", contact);
         doc.set("droppedContact", json.valueToTree(unknownContact));
+        // Tells the page these items were checked and may be shown as links; documents edited by hand or saved
+        // before this check show them as text
+        doc.put("contactChecked", true);
         List<String> unknownSkills = new ArrayList<>();
         for (JsonNode section : doc.path("sections")) {
             for (JsonNode entry : section.path("entries")) {
