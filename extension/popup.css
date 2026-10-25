@@ -1,0 +1,190 @@
+/* The app's tokens, so the popup feels like part of it */
+:root {
+  --paper: #f5f6f8;
+  --surface: #ffffff;
+  --ink: #1b2240;
+  --slate: #5a6378;
+  --faint: #8a92a6;
+  --rule: #e1e4eb;
+  --highlight: #ffe36e;
+  --ok: #18794e;
+  --ok-wash: #e6f4ec;
+  --warn: #9a6700;
+  --warn-wash: #fff4d6;
+  --danger: #b42318;
+  --focus: #3a55d9;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #10142a;
+    --surface: #161b33;
+    --ink: #e8eaf2;
+    --slate: #a2a9bd;
+    --faint: #737b93;
+    --rule: #262d4b;
+    --highlight: #7d6a12;
+    --ok: #5fd39a;
+    --ok-wash: #15302a;
+    --warn: #f5c451;
+    --warn-wash: #3a3017;
+    --danger: #ff8f80;
+    --focus: #8ea2ff;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  width: 360px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 14px/1.45 'Schibsted Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rule);
+  font-weight: 600;
+}
+
+main {
+  padding: 16px;
+}
+
+footer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--rule);
+  font-size: 12px;
+}
+
+footer a {
+  color: var(--focus);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+h1 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+p {
+  margin: 0 0 10px;
+}
+
+.muted {
+  color: var(--slate);
+}
+
+.faint {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+label {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  margin-top: 4px;
+  padding: 7px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.row > * {
+  flex: 1;
+}
+
+button {
+  width: 100%;
+  margin-top: 14px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--paper);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.note.ok {
+  background: var(--ok-wash);
+  color: var(--ok);
+}
+
+.note.warn {
+  background: var(--warn-wash);
+  color: var(--warn);
+}
+
+.note.error {
+  background: var(--warn-wash);
+  color: var(--danger);
+}
+
+ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+li {
+  margin: 2px 0;
+}
+
+.mark {
+  background-image: linear-gradient(transparent 55%, var(--highlight) 55%, var(--highlight) 92%, transparent 92%);
+}

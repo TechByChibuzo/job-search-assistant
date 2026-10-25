@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Job Search Assistant",
+  "version": "0.1.0",
+  "description": "Save the LinkedIn profile or role you're viewing, and fill application forms. You always press submit.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsaiIaRJYFDcCsIGPLBD8gKF6WExT/TNHm/6OVJiUxocEg7FEaxUE1mEWPV6ry/+Tpu+iowcpcZ1iXFLYrWSc7YNmXk1niUhBc1kPkYrsGL6lNc8nB3ppOUgA0twU1FogqzWAqptxOqOVwwI6dP/5tkTk4kuFvqsgXK0fd24ERir8jYIk8ipKodaG2koIBSWLBN53vL8mfZibQHuYmZYG/5ItfkaW/YhOCfqGwSRB9B1mVVGRO0cFbzvE4+ZG3xSI6oalSlASgIiE5qGDBFnL3/jH6+EObJoENhLI6NSSQC+lHOJ0OckQaRH4AXd2C4Iy6iGzwJtz9sHVgcfd7P78CQIDAQAB",
+  "action": {
+    "default_title": "Job Search Assistant",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" }
+  },
+  "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["http://localhost/*", "http://127.0.0.1/*"]
+}

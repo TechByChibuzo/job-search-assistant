@@ -4,6 +4,7 @@ private/
 # Build output
 backend/target/
 frontend/node_modules/
+extension/node_modules/
 frontend/dist/
 
 # Local config and secrets
