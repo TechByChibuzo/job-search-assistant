@@ -1,0 +1,43 @@
+# Everything runs on this machine, and every port is bound to 127.0.0.1 only (docs/adr/0001).
+#   docker compose up -d db     database only, for running the API and web app from your IDE
+#   docker compose up -d        the whole app at http://localhost:8081
+services:
+  db:
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_DB: jobsearch
+      POSTGRES_USER: jobsearch
+      POSTGRES_PASSWORD: jobsearch
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobsearch -d jobsearch"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/jobsearch
+      # Inside the container the API must accept connections from the web container;
+      # the port mapping below still keeps it off the network
+      SERVER_ADDRESS: 0.0.0.0
+      TZ: ${TZ:-America/Chicago}
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:8081:80"
+    depends_on:
+      - api
+
+volumes:
+  db-data:
