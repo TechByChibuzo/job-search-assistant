@@ -31,6 +31,9 @@ public class Company {
     /** Comma-separated search phrases; null means every role. */
     private String search;
 
+    /** The company's own website ("airbnb.com"), for its logo. */
+    private String domain;
+
     private boolean active = true;
 
     @Column(insertable = false, updatable = false)
@@ -77,6 +80,14 @@ public class Company {
             return List.of();
         }
         return Arrays.stream(search.split(",")).map(String::strip).filter(s -> !s.isEmpty()).distinct().toList();
+    }
+
+    public String getDomain() {
+        return domain;
+    }
+
+    public void setDomain(String domain) {
+        this.domain = domain;
     }
 
     public String getSearch() {

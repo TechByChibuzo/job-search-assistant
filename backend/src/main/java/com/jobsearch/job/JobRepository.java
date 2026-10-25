@@ -19,6 +19,9 @@ interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecut
 
     Optional<Job> findFirstByUrl(String url);
 
+    @Query("select j.url from Job j where j.company.id = :companyId order by j.id desc")
+    List<String> findUrlsByCompany(long companyId, Limit limit);
+
     /** Open roles first seen since {@code since}, not part of a first import, not yet scored: most recent first. */
     @EntityGraph(attributePaths = "company")
     @Query("""

@@ -25,7 +25,8 @@ final class CompanyDtos {
             @Size(max = 200) String name,
             @Size(max = 2000) String careersUrl,
             Boolean active,
-            @Size(max = 500) String search) {}
+            @Size(max = 500) String search,
+            @Size(max = 300) String domain) {}
 
     record DetectRequest(@NotBlank @Size(max = 2000) String careersUrl) {}
 
@@ -44,6 +45,7 @@ final class CompanyDtos {
             String board,
             String careersUrl,
             String search,
+            String domain,
             boolean searchBased,
             boolean active,
             long openJobs,
@@ -59,6 +61,7 @@ final class CompanyDtos {
                     c.getBoard(),
                     c.getCareersUrl(),
                     c.getSearch(),
+                    c.getDomain(),
                     c.getAts().isSearchBased(),
                     c.isActive(),
                     openJobs,

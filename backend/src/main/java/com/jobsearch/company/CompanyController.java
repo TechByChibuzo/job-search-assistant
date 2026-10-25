@@ -1,11 +1,15 @@
 package com.jobsearch.company;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
 import jakarta.validation.Valid;
 
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -28,10 +32,23 @@ class CompanyController {
 
     private final CompanyService service;
     private final OpenJobCounts openJobCounts;
+    private final LogoService logos;
 
-    CompanyController(CompanyService service, OpenJobCounts openJobCounts) {
+    CompanyController(CompanyService service, OpenJobCounts openJobCounts, LogoService logos) {
         this.service = service;
         this.openJobCounts = openJobCounts;
+        this.logos = logos;
+    }
+
+    /** The company's logo, served by the app; 404 when none was found, and the interface shows initials. */
+    @GetMapping("/{id}/logo")
+    ResponseEntity<byte[]> logo(@PathVariable long id) {
+        return logos.logo(id)
+                .map(l -> ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(l.contentType()))
+                        .cacheControl(CacheControl.maxAge(Duration.ofDays(1)))
+                        .body(l.image()))
+                .orElseGet(() -> ResponseEntity.notFound().cacheControl(CacheControl.maxAge(Duration.ofHours(1))).build());
     }
 
     @GetMapping
@@ -62,6 +79,9 @@ class CompanyController {
     @PatchMapping("/{id}")
     CompanyResponse update(@PathVariable long id, @Valid @RequestBody UpdateCompanyRequest request) {
         Company company = service.update(id, request);
+        if (request.domain() != null) {
+            logos.forget(id);
+        }
         return CompanyResponse.of(company, openJobCounts.byCompanyId().getOrDefault(id, 0L));
     }
 

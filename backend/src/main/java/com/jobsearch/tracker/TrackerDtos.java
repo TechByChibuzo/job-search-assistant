@@ -24,7 +24,7 @@ final class TrackerDtos {
         }
     }
 
-    record PersonRef(Long id, String name, String title, ContactKind kind, String linkedinUrl, String companyName) {}
+    record PersonRef(Long id, String name, String title, ContactKind kind, String linkedinUrl, Long companyId, String companyName) {}
 
     record EventView(Long id, OutreachEventType type, Instant at, String note) {}
 
@@ -46,7 +46,8 @@ final class TrackerDtos {
             var c = o.getContact();
             return new OutreachView(
                     o.getId(),
-                    new PersonRef(c.getId(), c.getName(), c.getTitle(), c.getKind(), c.getLinkedinUrl(), c.getCompany().getName()),
+                    new PersonRef(c.getId(), c.getName(), c.getTitle(), c.getKind(), c.getLinkedinUrl(), c.getCompany().getId(),
+                            c.getCompany().getName()),
                     RoleRef.of(o.getJob()),
                     o.getChannel(),
                     o.getStatus(),

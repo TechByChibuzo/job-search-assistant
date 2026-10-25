@@ -72,6 +72,7 @@ public class CompanyService {
                 : nameFromBoard(board.board());
         Company company = new Company(name, board, blankToNull(request.careersUrl()));
         company.setSearch(request.search());
+        CompanyDomains.known(name).ifPresent(company::setDomain);
         return companies.save(company);
     }
 
@@ -86,6 +87,11 @@ public class CompanyService {
         }
         if (request.search() != null) {
             company.setSearch(request.search());
+        }
+        if (request.domain() != null) {
+            String domain = request.domain().isBlank() ? null : CompanyDomains.normalize(request.domain())
+                    .orElseThrow(() -> new BadRequestException("'" + request.domain() + "' isn't a website address like airbnb.com"));
+            company.setDomain(domain);
         }
         if (notBlank(request.careersUrl())) {
             DetectedBoard board = detect(request.careersUrl());
