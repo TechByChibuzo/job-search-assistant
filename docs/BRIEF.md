@@ -44,6 +44,23 @@ Most LinkedIn listings originally come from companies' hiring systems (ATS), and
 5. **Outreach:** an AI-drafted referral message that names the exact role and a real connection point. The owner reviews and sends it on LinkedIn or by email.
 6. **Tracking:** contacted → replied → referred → interviewing → offer or closed. Follow-up reminders after about 5 days of silence, with a drafted follow-up. Stats on which message styles get replies.
 
+## Applying: the app does the dirty work, the owner presses submit
+
+The owner wants the app to handle applications. Agreed scope:
+
+- **Tailored documents:** a resume version and cover letter per job, built from the owner's real resume. Never invent experience.
+- **Form filling:** the browser extension fills application pages on Greenhouse, Lever, Ashby and Workday:
+  - contact details, links, work history and education
+  - the resume upload
+  - drafted answers to common questions ("Why this company?", "Years of Java?")
+- **Answer bank:** past answers are reused, so later applications are mostly review.
+- **Logging:** each application is recorded in the tracker (job, date, resume version) and linked to the referral outreach for that role.
+- **The owner reviews and presses submit.** No unattended submission. The reasons:
+  - **legal attestations must be the owner's own answers:** work authorization, sponsorship, background-check consent, EEO and diversity questions
+  - **CAPTCHAs and custom questions** break full automation anyway
+  - **the ATS public APIs are read-only:** Greenhouse's and Lever's application APIs need the *company's* private key, so the only other route is driving the browser unattended, which is fragile
+- **LinkedIn Easy Apply stays manual,** per the ground rules.
+
 ## Cost
 
 - **Job APIs, local hosting (Docker), Gmail API, an unpacked Chrome extension:** free.
