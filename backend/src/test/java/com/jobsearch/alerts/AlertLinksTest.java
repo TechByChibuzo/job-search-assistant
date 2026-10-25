@@ -34,6 +34,8 @@ class AlertLinksTest {
         "https://careers.microsoft.com/profile/alerts",
         "https://example.com/about",
         "mailto:jobs@example.com",
+        "httpx://jobs.example.com/job/12345",
+        "javascript://jobs.example.com/job/12345",
     })
     void ignoresEverythingElse(String link) {
         assertThat(AlertLinks.looksLikeJobPosting(link)).isFalse();

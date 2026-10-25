@@ -64,12 +64,15 @@ final class AlertLinks {
         return uri == null || uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT).replaceFirst("^www\\.", "");
     }
 
+    /** Only absolute http(s) links; anything else (mailto:, javascript:, httpx:) is not a posting. */
     private static URI parse(String href) {
-        if (href == null || !href.regionMatches(true, 0, "http", 0, 4)) {
+        if (href == null) {
             return null;
         }
         try {
-            return new URI(href.strip().replace(" ", "%20"));
+            URI uri = new URI(href.strip().replace(" ", "%20"));
+            String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
+            return (scheme.equals("http") || scheme.equals("https")) && uri.getHost() != null ? uri : null;
         } catch (URISyntaxException e) {
             return null;
         }

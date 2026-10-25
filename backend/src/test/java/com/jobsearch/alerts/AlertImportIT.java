@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -24,9 +26,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.jobsearch.TestcontainersConfiguration;
+import com.jobsearch.job.ManualJobService;
 
 /** Alert emails end to end, with Google faked: read, parsed, filtered, saved once. */
 @SpringBootTest(properties = {"app.gmail.client-id=test-client", "app.gmail.client-secret=test-secret"})
@@ -62,6 +66,9 @@ class AlertImportIT {
     @MockitoBean
     GmailAuth auth;
 
+    @MockitoSpyBean
+    ManualJobService manualJobs;
+
     @BeforeEach
     void setUp() {
         db.execute("TRUNCATE company, job, contact, pursuit, outreach, outreach_event, gmail_account, imported_email RESTART IDENTITY CASCADE");
@@ -96,6 +103,28 @@ class AlertImportIT {
         assertThat(db.queryForObject("select count(*) from imported_email", Integer.class)).isEqualTo(2);
         // And the same role from a later email isn't saved twice
         assertThat(importer.run().newJobs()).isZero();
+    }
+
+    @Test
+    void aRoleThatCantBeSavedDoesNotStopTheEmailOrTheRun() throws Exception {
+        AlertEmail bad = new AlertEmail("m3", "LinkedIn <jobalerts-noreply@linkedin.com>", "New jobs", Instant.now(), """
+                <table><tr><td>
+                  <a href="https://www.linkedin.com/comm/jobs/view/333/">Engineer</a>
+                  <p>Microsoft · Redmond, WA</p>
+                </td></tr><tr><td>
+                  <a href="https://www.linkedin.com/comm/jobs/view/444/">Data Engineer</a>
+                  <p>Microsoft · Redmond, WA</p>
+                </td></tr></table>""", null);
+        when(gmail.alertEmails(anyString(), anyString(), anyInt(), any())).thenReturn(List.of(bad));
+        doThrow(new IllegalStateException("database hiccup"))
+                .when(manualJobs).addFromAlert(eq("https://www.linkedin.com/jobs/view/333/"), any(), any(), any(), any());
+
+        var result = importer.run();
+
+        assertThat(result.status().name()).isEqualTo("OK");
+        assertThat(result.newJobs()).isEqualTo(1);
+        assertThat(result.skippedJobs()).isEqualTo(1);
+        assertThat(db.queryForObject("select count(*) from imported_email where message_id = 'm3'", Integer.class)).isEqualTo(1);
     }
 
     @Test

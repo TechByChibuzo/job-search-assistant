@@ -128,15 +128,20 @@ class GmailAuth {
     @Transactional
     void disconnect() {
         account().ifPresent(a -> {
+            // The token goes in the form body, never the URL, so it can't end up in logs or error messages
+            var form = new LinkedMultiValueMap<String, String>();
+            form.add("token", a.getRefreshToken());
             try {
                 google.post()
-                        .uri(UriComponentsBuilder.fromUriString("https://oauth2.googleapis.com/revoke")
-                                .queryParam("token", a.getRefreshToken()).build().toUri())
+                        .uri("https://oauth2.googleapis.com/revoke")
                         .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .body(form)
                         .retrieve()
                         .toBodilessEntity();
+            } catch (RestClientResponseException e) {
+                log.warn("Google refused to revoke the Gmail token (HTTP {}); forgetting it anyway", e.getStatusCode().value());
             } catch (RuntimeException e) {
-                log.warn("Couldn't revoke the Gmail token at Google; forgetting it anyway: {}", e.getMessage());
+                log.warn("Couldn't reach Google to revoke the Gmail token ({}); forgetting it anyway", e.getClass().getSimpleName());
             }
             accounts.deleteAll();
         });

@@ -92,11 +92,18 @@ class AlertImporter implements ExtraFeed {
                     skipped++;
                     continue;
                 }
-                boolean isNew = jobs.addFromAlert(job.url(), job.title(), job.company(), job.location(), email.receivedAt()).isPresent();
-                if (isNew) {
-                    added++;
-                } else {
+                // One bad role mustn't stop the email, or the email would be retried, and fail, every day
+                try {
+                    boolean isNew = jobs.addFromAlert(job.url(), job.title(), job.company(), job.location(), email.receivedAt())
+                            .isPresent();
+                    if (isNew) {
+                        added++;
+                    } else {
+                        skipped++;
+                    }
+                } catch (RuntimeException e) {
                     skipped++;
+                    log.warn("Skipped a role in an alert email from {} ({}): {}", email.from(), job.title(), e.getMessage());
                 }
             }
             imported.save(new ImportedEmail(email, now, found.size()));
