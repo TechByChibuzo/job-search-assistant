@@ -212,3 +212,58 @@ export function useSaveProfile() {
 export function useProfileFromResume() {
   return useMutation({ mutationFn: () => api('/profile/from-resume', { method: 'POST' }) })
 }
+
+// Phase 6: answer bank, tailored documents, insights
+
+export function useAnswers(q) {
+  return useQuery({ queryKey: ['answers', q ?? ''], queryFn: () => api(`/answers${toQuery({ q })}`) })
+}
+
+function useAnswerMutation(fn) {
+  const client = useQueryClient()
+  return useMutation({ mutationFn: fn, onSuccess: () => client.invalidateQueries({ queryKey: ['answers'] }) })
+}
+
+export const useSaveAnswer = () =>
+  useAnswerMutation(({ id, ...body }) => (id ? api(`/answers/${id}`, { method: 'PATCH', body }) : api('/answers', { method: 'POST', body })))
+export const useDeleteAnswer = () => useAnswerMutation((id) => api(`/answers/${id}`, { method: 'DELETE' }))
+
+export function useDraftAnswer() {
+  return useMutation({ mutationFn: (body) => api('/answers/draft', { method: 'POST', body }) })
+}
+
+export function useDocuments(jobId) {
+  return useQuery({ queryKey: ['documents', jobId], queryFn: () => api(`/jobs/${jobId}/documents`), enabled: jobId != null })
+}
+
+export function useDocument(id) {
+  return useQuery({ queryKey: ['document', id], queryFn: () => api(`/documents/${id}`) })
+}
+
+export function useGenerateDocument(jobId) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (kind) => api(`/jobs/${jobId}/documents`, { method: 'POST', body: { kind } }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['documents', jobId] }),
+  })
+}
+
+export function useEditDocument() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, content }) => api(`/documents/${id}`, { method: 'PATCH', body: { content } }),
+    onSuccess: (doc) => client.setQueryData(['document', String(doc.id)], doc),
+  })
+}
+
+export function useDeleteDocument() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => api(`/documents/${id}`, { method: 'DELETE' }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['documents'] }),
+  })
+}
+
+export function useInsights() {
+  return useQuery({ queryKey: ['insights'], queryFn: () => api('/insights') })
+}

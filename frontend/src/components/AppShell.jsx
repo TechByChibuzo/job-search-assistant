@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Building2, CircleUserRound, Inbox, KanbanSquare, Monitor, Moon, Sun, Users } from 'lucide-react'
+import { BarChart3, Building2, CircleUserRound, Inbox, KanbanSquare, MessageSquareQuote, Monitor, Moon, Sun, Users } from 'lucide-react'
 import { useCompanies, useContacts, useDue, useSummary } from '../api/hooks'
 import { useTheme } from '../lib/theme'
 import SyncPanel from './SyncPanel'
@@ -87,14 +87,16 @@ export default function AppShell({ children }) {
   const people = useContacts()
 
   return (
-    <div className="min-h-dvh lg:pl-64">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-rail p-4 text-rail-ink lg:flex">
+    <div className="min-h-dvh lg:pl-64 print:pl-0">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-rail p-4 text-rail-ink lg:flex print:hidden">
         <Brand className="px-2 pt-1 text-[15px]" />
         <nav className="mt-8 flex flex-col gap-1" aria-label="Main">
           <RailLink to="/jobs" icon={Inbox} label="Inbox" count={summary.data?.newJobs ?? 0} />
           <RailLink to="/tracker" icon={KanbanSquare} label="Tracker" count={due.data?.length ?? 0} alert />
           <RailLink to="/people" icon={Users} label="People" count={people.data?.length ?? 0} />
           <RailLink to="/companies" icon={Building2} label="Companies" count={companies.data?.length ?? 0} />
+          <RailLink to="/answers" icon={MessageSquareQuote} label="Answers" />
+          <RailLink to="/insights" icon={BarChart3} label="Insights" />
           <RailLink to="/profile" icon={CircleUserRound} label="Profile" />
         </nav>
         <div className="mt-auto flex flex-col gap-3">
@@ -103,7 +105,7 @@ export default function AppShell({ children }) {
         </div>
       </aside>
 
-      <header className="sticky top-0 z-30 border-b border-rule bg-paper/90 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-30 border-b border-rule bg-paper/90 backdrop-blur lg:hidden print:hidden">
         <div className="flex items-center gap-3 px-4 py-2.5">
           <span className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
             <img src="/favicon.svg" alt="" className="size-6" />
@@ -120,11 +122,13 @@ export default function AppShell({ children }) {
           </MobileTab>
           <MobileTab to="/people">People</MobileTab>
           <MobileTab to="/companies">Companies</MobileTab>
+          <MobileTab to="/answers">Answers</MobileTab>
+          <MobileTab to="/insights">Insights</MobileTab>
           <MobileTab to="/profile">Profile</MobileTab>
         </nav>
       </header>
 
-      <main className="mx-auto max-w-[1400px] px-4 pb-16 sm:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto max-w-[1400px] px-4 pb-16 sm:px-6 lg:px-8 print:max-w-none print:p-0">{children}</main>
     </div>
   )
 }

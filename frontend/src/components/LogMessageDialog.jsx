@@ -31,6 +31,8 @@ export default function LogMessageDialog({ open, onClose, companyId, companyName
   const [message, setMessage] = useState('')
   const [draftKind, setDraftKind] = useState('CONNECTION_NOTE')
   const [error, setError] = useState(null)
+  // Whether the message started as Claude's draft, for the insights page; edits keep it a draft
+  const [drafted, setDrafted] = useState(false)
 
   const chosen = personId || (people.length === 0 ? NEW : '')
   const limit = channel === 'LINKEDIN' && draftKind === 'CONNECTION_NOTE' ? 300 : null
@@ -47,7 +49,13 @@ export default function LogMessageDialog({ open, onClose, companyId, companyName
     }
     draft.mutate(
       { kind: channel === 'LINKEDIN' ? draftKind : 'MESSAGE', channel, jobId, ...who },
-      { onSuccess: (d) => setMessage(d.subject ? `Subject: ${d.subject}\n\n${d.message}` : d.message), onError: (e) => setError(e.message) },
+      {
+        onSuccess: (d) => {
+          setMessage(d.subject ? `Subject: ${d.subject}\n\n${d.message}` : d.message)
+          setDrafted(true)
+        },
+        onError: (e) => setError(e.message),
+      },
     )
   }
   const busy = createContact.isPending || log.isPending
@@ -61,7 +69,7 @@ export default function LogMessageDialog({ open, onClose, companyId, companyName
         const created = await createContact.mutateAsync({ companyId, ...person })
         contactId = created.id
       }
-      const sent = await log.mutateAsync({ contactId, jobId, channel, sentOn, message: message.trim() || undefined })
+      const sent = await log.mutateAsync({ contactId, jobId, channel, sentOn, message: message.trim() || undefined, drafted })
       toast(`Recorded your message to ${sent.person.name}. A follow-up reminder is set for ${sent.followUpOn}.`)
       setPersonId('')
       setPerson({ kind: 'ENGINEER' })

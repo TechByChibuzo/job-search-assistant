@@ -6,6 +6,7 @@ import { workplaceLabel } from '../lib/labels'
 import { safeHref } from '../lib/links'
 import Description from './Description'
 import CompanyLogo from './CompanyLogo'
+import DocumentsPanel from './DocumentsPanel'
 import FitPanel from './FitPanel'
 import TrackPanel from './TrackPanel'
 
@@ -120,6 +121,7 @@ export default function JobDetail({ id, onClose }) {
       <div className="space-y-4 border-b border-rule p-6 sm:p-8">
         <FitPanel job={job} detail={data} />
         <TrackPanel job={job} />
+        <DocumentsPanel job={job} />
       </div>
       <div className="max-w-[70ch] p-6 text-[15px] leading-relaxed text-ink/90 sm:p-8">
         <Description text={description} />
