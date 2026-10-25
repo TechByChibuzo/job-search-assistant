@@ -173,3 +173,24 @@ export function useGmailDisconnect() {
     onSuccess: () => client.invalidateQueries({ queryKey: ['gmail'] }),
   })
 }
+
+// Claude: match scores and drafts
+
+export function useAi() {
+  return useQuery({ queryKey: ['ai'], queryFn: () => api('/ai') })
+}
+
+export function useMatch() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (jobId) => api(`/jobs/${jobId}/match`, { method: 'POST' }),
+    onSuccess: (_, jobId) => {
+      client.invalidateQueries({ queryKey: ['job', jobId] })
+      client.invalidateQueries({ queryKey: ['jobs'] })
+    },
+  })
+}
+
+export function useDraft() {
+  return useMutation({ mutationFn: (body) => api('/drafts', { method: 'POST', body }) })
+}

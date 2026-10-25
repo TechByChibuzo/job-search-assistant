@@ -1,4 +1,5 @@
 import AddCompanyForm from '../components/AddCompanyForm'
+import AiCard from '../components/AiCard'
 import AlertEmailsCard from '../components/AlertEmailsCard'
 import CompanyRow from '../components/CompanyRow'
 import { useCompanies, useSummary } from '../api/hooks'
@@ -39,6 +40,10 @@ export default function CompaniesPage() {
 
       <div className="mt-6">
         <AlertEmailsCard />
+      </div>
+
+      <div className="mt-6">
+        <AiCard />
       </div>
 
       <section className="mt-10" aria-labelledby="tracked">

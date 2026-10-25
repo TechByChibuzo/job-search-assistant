@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { ChevronDown, ExternalLink, Trash2 } from 'lucide-react'
+import { ChevronDown, ExternalLink, Sparkles, Trash2 } from 'lucide-react'
 import { useDeleteOutreach, useRecordEvent } from '../api/hooks'
 import { timeAgo } from '../lib/dates'
 import { EVENT_LABELS, kindLabel, relativeDay } from '../lib/tracker'
 import { safeHref } from '../lib/links'
+import DraftDialog from './DraftDialog'
 import { OutreachPill } from './StatusPill'
 import { useToast } from './Toasts'
 
@@ -21,6 +22,7 @@ export default function Conversation({ outreach: o, showRole = false }) {
   const remove = useDeleteOutreach()
   const [open, setOpen] = useState(false)
   const [note, setNote] = useState('')
+  const [drafting, setDrafting] = useState(false)
 
   function act(type, done) {
     record.mutate({ id: o.id, type }, { onSuccess: () => toast(`${done}.`), onError: (e) => toast(e.message, { tone: 'error' }) })
@@ -74,6 +76,16 @@ export default function Conversation({ outreach: o, showRole = false }) {
             {a.label}
           </button>
         ))}
+        {o.status === 'AWAITING_REPLY' && (
+          <button
+            type="button"
+            onClick={() => setDrafting(true)}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-slate hover:text-ink"
+          >
+            <Sparkles className="size-3.5" aria-hidden />
+            Draft follow-up
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -123,6 +135,7 @@ export default function Conversation({ outreach: o, showRole = false }) {
           </form>
         </div>
       )}
+      {drafting && <DraftDialog open onClose={() => setDrafting(false)} outreach={o} />}
     </li>
   )
 }

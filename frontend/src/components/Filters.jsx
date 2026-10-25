@@ -90,6 +90,15 @@ export default function Filters({ filters, onChange }) {
           )
         })}
       </div>
+      <select
+        aria-label="Sort"
+        value={filters.sort}
+        onChange={(e) => set({ sort: e.target.value })}
+        className={`${field} px-3`}
+      >
+        <option value="newest">Newest first</option>
+        <option value="fit">Best fit first</option>
+      </select>
       <button
         type="button"
         aria-pressed={filters.newOnly}

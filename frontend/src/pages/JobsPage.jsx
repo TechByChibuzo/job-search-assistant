@@ -18,6 +18,7 @@ function readFilters(params) {
     companyId: params.get('companyId'),
     workplace: params.getAll('workplace'),
     newOnly: params.get('newOnly') === 'true',
+    sort: params.get('sort') === 'fit' ? 'fit' : 'newest',
   }
 }
 
@@ -28,6 +29,7 @@ function writeFilters(filters, selected) {
   if (filters.companyId) next.set('companyId', filters.companyId)
   filters.workplace.forEach((w) => next.append('workplace', w))
   if (filters.newOnly) next.set('newOnly', 'true')
+  if (filters.sort === 'fit') next.set('sort', 'fit')
   if (selected) next.set('job', selected)
   return next
 }

@@ -1,5 +1,6 @@
 import { groupByDay, shortAge } from '../lib/dates'
 import { workplaceLabel } from '../lib/labels'
+import FitScore from './FitScore'
 import Monogram from './Monogram'
 
 function JobRow({ job, selected, onSelect }) {
@@ -22,11 +23,14 @@ function JobRow({ job, selected, onSelect }) {
             <span className="min-w-0 flex-1 text-[15px] leading-snug font-medium">
               <span className={job.isNew ? 'highlight highlight-in' : undefined}>{job.title}</span>
             </span>
-            {job.listedAt && (
-              <span className="shrink-0 text-xs text-faint" title={job.postedAt ? 'Posted' : 'First seen'}>
-                {shortAge(job.listedAt)}
-              </span>
-            )}
+            <span className="flex shrink-0 items-center gap-2">
+              {job.listedAt && (
+                <span className="text-xs text-faint" title={job.postedAt ? 'Posted' : 'First seen'}>
+                  {shortAge(job.listedAt)}
+                </span>
+              )}
+              <FitScore score={job.matchScore} />
+            </span>
           </span>
           <span className="mt-0.5 block truncate text-sm text-slate">
             {job.companyName}

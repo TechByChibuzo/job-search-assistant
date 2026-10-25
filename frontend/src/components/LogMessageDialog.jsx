@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useContacts, useCreateContact, useLogOutreach } from '../api/hooks'
+import { Sparkles } from 'lucide-react'
+import { useAi, useContacts, useCreateContact, useDraft, useLogOutreach } from '../api/hooks'
 import { CHANNELS, todayIso } from '../lib/tracker'
 import { inputClass, primaryButton, secondaryButton, textareaClass } from '../lib/ui'
 import Dialog from './Dialog'
@@ -19,15 +20,36 @@ export default function LogMessageDialog({ open, onClose, companyId, companyName
   const createContact = useCreateContact()
   const log = useLogOutreach()
   const people = contacts.data ?? []
+  const ai = useAi()
+  const draft = useDraft()
+  const canDraft = ai.data?.configured && ai.data?.resume
 
   const [personId, setPersonId] = useState('')
   const [person, setPerson] = useState({ kind: 'ENGINEER' })
   const [channel, setChannel] = useState('LINKEDIN')
   const [sentOn, setSentOn] = useState(todayIso())
   const [message, setMessage] = useState('')
+  const [draftKind, setDraftKind] = useState('CONNECTION_NOTE')
   const [error, setError] = useState(null)
 
   const chosen = personId || (people.length === 0 ? NEW : '')
+  const limit = channel === 'LINKEDIN' && draftKind === 'CONNECTION_NOTE' ? 300 : null
+
+  function generate() {
+    setError(null)
+    const who =
+      chosen === NEW
+        ? { personName: person.name, personTitle: person.title, personKind: person.kind }
+        : { contactId: Number(chosen) }
+    if (chosen === NEW && !person.name?.trim()) {
+      setError('Add the person’s name first, so the draft can address them.')
+      return
+    }
+    draft.mutate(
+      { kind: channel === 'LINKEDIN' ? draftKind : 'MESSAGE', channel, jobId, ...who },
+      { onSuccess: (d) => setMessage(d.subject ? `Subject: ${d.subject}\n\n${d.message}` : d.message), onError: (e) => setError(e.message) },
+    )
+  }
   const busy = createContact.isPending || log.isPending
 
   async function submit(e) {
@@ -102,15 +124,57 @@ export default function LogMessageDialog({ open, onClose, companyId, companyName
             />
           </Field>
         </div>
-        <Field id="log-message" label="What you wrote" optional hint="Kept with the conversation, and later used to see which messages get replies.">
+        <div>
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <label htmlFor="log-message" className="text-sm font-medium">
+              What you wrote <span className="font-normal text-faint">(optional)</span>
+            </label>
+            {canDraft && chosen && (
+              <div className="flex items-center gap-2">
+                {channel === 'LINKEDIN' && (
+                  <select
+                    aria-label="Kind of message"
+                    value={draftKind}
+                    onChange={(e) => setDraftKind(e.target.value)}
+                    className="h-8 rounded-lg border border-rule bg-surface px-2 text-xs"
+                  >
+                    <option value="CONNECTION_NOTE">Connection note</option>
+                    <option value="MESSAGE">Message</option>
+                  </select>
+                )}
+                <button
+                  type="button"
+                  onClick={generate}
+                  disabled={draft.isPending}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-rule bg-surface px-2.5 text-xs font-medium hover:border-slate disabled:opacity-50"
+                >
+                  <Sparkles className="size-3.5" aria-hidden />
+                  {draft.isPending ? 'Drafting…' : message ? 'Draft again' : 'Draft with Claude'}
+                </button>
+              </div>
+            )}
+          </div>
           <textarea
             id="log-message"
-            rows={4}
+            rows={5}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             className={textareaClass}
+            aria-describedby="log-message-hint"
           />
-        </Field>
+          <p id="log-message-hint" className="mt-1.5 flex justify-between gap-4 text-xs text-faint">
+            <span>
+              {canDraft
+                ? 'Draft it here, edit it, send it yourself on LinkedIn or by email, then record it.'
+                : 'Kept with the conversation, and later used to see which messages get replies.'}
+            </span>
+            {limit && message && (
+              <span className={message.length > limit ? 'font-medium text-danger' : ''}>
+                {message.length}/{limit}
+              </span>
+            )}
+          </p>
+        </div>
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className={secondaryButton}>

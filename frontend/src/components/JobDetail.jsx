@@ -6,6 +6,7 @@ import { workplaceLabel } from '../lib/labels'
 import { safeHref } from '../lib/links'
 import Description from './Description'
 import Monogram from './Monogram'
+import FitPanel from './FitPanel'
 import TrackPanel from './TrackPanel'
 
 function CopyLink({ url }) {
@@ -116,7 +117,8 @@ export default function JobDetail({ id, onClose }) {
         </div>
         {job.manual && <p className="mt-3 text-xs text-faint">Added by hand. Syncs leave it alone; close it when the role is gone.</p>}
       </header>
-      <div className="border-b border-rule p-6 sm:p-8">
+      <div className="space-y-4 border-b border-rule p-6 sm:p-8">
+        <FitPanel job={job} detail={data} />
         <TrackPanel job={job} />
       </div>
       <div className="max-w-[70ch] p-6 text-[15px] leading-relaxed text-ink/90 sm:p-8">
