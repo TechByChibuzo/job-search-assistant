@@ -162,7 +162,14 @@ async function fillView(tab) {
     fillButton.textContent = 'Filling…'
     try {
       const resume = attach.checked ? await resumeFile() : null
-      const report = await inPage(tab.id, 'content/fill.js', (p, r) => globalThis.JSA_FILL.fill(document, p, r), [profile.fields, resume])
+      const answers = await savedAnswers(tab)
+      const report = await inPage(tab.id, 'content/fill.js', (p, r, a) => globalThis.JSA_FILL.fill(document, p, r, a), [
+        profile.fields,
+        resume,
+        answers,
+      ])
+      // Counts toward which answers rise to the top of the bank; a failure here doesn't undo the fill
+      report.answered.forEach((a) => api(`/answers/${a.answerId}/used`, { method: 'POST' }).catch(() => {}))
       result.replaceChildren(...reportView(report, profile.resumeFileName), recordForm(tab, report, profile.resumeFileName))
       fillButton.textContent = 'Fill again'
     } catch (err) {
@@ -187,6 +194,14 @@ async function fillView(tab) {
   )
 }
 
+/** The page's long-answer questions, matched against the answer bank: { question: { answerId, answer } }. */
+async function savedAnswers(tab) {
+  const questions = await inPage(tab.id, 'content/fill.js', () => globalThis.JSA_FILL.questions(document))
+  if (!questions?.length) return {}
+  const matches = await api('/answers/match', { method: 'POST', body: { questions: questions.slice(0, 50) } })
+  return Object.fromEntries(matches.map((m) => [m.question, { answerId: m.answerId, answer: m.answer }]))
+}
+
 function reportView(report, resumeFileName) {
   const resumeLine = {
     attached: `Attached ${resumeFileName}.`,
@@ -203,6 +218,15 @@ function reportView(report, resumeFileName) {
       resumeLine,
     ),
   ]
+  if (report.answered.length) {
+    nodes.push(
+      note(
+        'info',
+        h('strong', {}, 'From your answer bank (outlined in blue), read before you submit:'),
+        h('ul', {}, report.answered.map((a) => h('li', {}, a.question))),
+      ),
+    )
+  }
   if (report.needsYou.length) {
     nodes.push(
       note('warn', h('strong', {}, 'For you to answer (outlined in amber):'), h('ul', {}, report.needsYou.slice(0, 8).map((q) => h('li', {}, q)))),

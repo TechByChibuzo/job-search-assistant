@@ -1,6 +1,7 @@
 /*
  * Fills the application form on the page from the owner's profile, once, when they click "Fill". It types
- * into empty text fields it recognises and attaches the resume. It never answers work authorization,
+ * into empty text fields it recognises, puts saved answers into long-answer boxes whose question matches
+ * one in the owner's answer bank, and attaches the resume. It never answers work authorization,
  * sponsorship, EEO, consent or similar questions: those are outlined for the owner. It never submits.
  * Injected on demand (activeTab); defines globalThis.JSA_FILL for the popup to call.
  */
@@ -194,13 +195,27 @@
     return 'attached'
   }
 
+  /** The long-answer boxes the owner can see, empty and not sensitive: the questions to look up in the answer bank. */
+  function questions(doc) {
+    const found = []
+    for (const el of doc.querySelectorAll('textarea')) {
+      if (!visible(el) || el.value) continue
+      const label = labelText(doc, el) || el.getAttribute('aria-label') || el.getAttribute('placeholder') || ''
+      if (label && !SENSITIVE.test(describe(doc, el)) && !found.includes(label)) found.push(label)
+    }
+    return found
+  }
+
   /**
    * @param profile the owner's profile fields
    * @param resume  { base64, fileName, type }, or null to leave the upload to the owner
-   * @returns what was filled, what was left for the owner, and whether the resume was attached
+   * @param answers saved answers by the question they match on this page ({ question: { answerId, answer } })
+   * @returns what was filled, which saved answers were used, what was left for the owner, and whether the
+   *          resume was attached
    */
-  function fill(doc, profile, resume) {
+  function fill(doc, profile, resume, answers = {}) {
     const filled = []
+    const answered = []
     const needsYou = []
     const seenQuestions = new Set()
 
@@ -219,7 +234,17 @@
         mark(el, '#d97706')
         continue
       }
-      // Only plain text fields are filled; choices, checkboxes and long answers stay with the owner
+      // A long answer is filled only from the answer bank, outlined in blue for the owner to read
+      if (el.tagName === 'TEXTAREA') {
+        const saved = Object.hasOwn(answers, label) ? answers[label] : null
+        if (saved && !el.value) {
+          setValue(el, saved.answer)
+          mark(el, '#2a78d6')
+          answered.push({ question: label, answerId: saved.answerId })
+        }
+        continue
+      }
+      // Only plain text fields are filled; choices and checkboxes stay with the owner
       if (el.tagName !== 'INPUT' || !TEXT_TYPES.has(type) || el.value) continue
       const key = keyFor(el, description)
       const value = key && valueFor(key, profile)
@@ -229,8 +254,8 @@
       filled.push(label || key)
     }
 
-    return { filled, needsYou, resume: attachResume(doc, resume), pageTitle: doc.title }
+    return { filled, answered, needsYou, resume: attachResume(doc, resume), pageTitle: doc.title }
   }
 
-  globalThis.JSA_FILL = { fill, keyFor, describe, SENSITIVE }
+  globalThis.JSA_FILL = { fill, questions, keyFor, describe, SENSITIVE }
 })()

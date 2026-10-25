@@ -11,6 +11,8 @@
   --ok-wash: #e6f4ec;
   --warn: #9a6700;
   --warn-wash: #fff4d6;
+  --info: #1f5fae;
+  --info-wash: #e7f0fc;
   --danger: #b42318;
   --focus: #3a55d9;
   color-scheme: light;
@@ -29,6 +31,8 @@
     --ok-wash: #15302a;
     --warn: #f5c451;
     --warn-wash: #3a3017;
+    --info: #8ec0ff;
+    --info-wash: #17284a;
     --danger: #ff8f80;
     --focus: #8ea2ff;
     color-scheme: dark;
@@ -169,6 +173,11 @@ button:disabled {
 .note.warn {
   background: var(--warn-wash);
   color: var(--warn);
+}
+
+.note.info {
+  background: var(--info-wash);
+  color: var(--info);
 }
 
 .note.error {

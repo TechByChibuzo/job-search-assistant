@@ -170,3 +170,32 @@ describe('what it never does', () => {
     expect(document.getElementById('cl').files).toHaveLength(0)
   })
 })
+
+describe('answers from the bank', () => {
+  it('lists the long-answer questions it may fill, and leaves sensitive ones out', () => {
+    form(`
+      <label for="why">Why do you want to work here?</label><textarea id="why"></textarea>
+      <label for="auth">Describe your work authorization status</label><textarea id="auth"></textarea>
+      <label for="done">Anything else?</label><textarea id="done">Already written</textarea>`)
+    expect(globalThis.JSA_FILL.questions(document)).toEqual(['Why do you want to work here?'])
+  })
+
+  it('fills a matched answer, outlined in blue, and never one into a sensitive or written box', () => {
+    form(`
+      <label for="why">Why do you want to work here?</label><textarea id="why"></textarea>
+      <label for="auth">Describe your work authorization status</label><textarea id="auth"></textarea>
+      <label for="other">Tell us about a project</label><textarea id="other"></textarea>`)
+    const answers = {
+      'Why do you want to work here?': { answerId: 4, answer: 'I like the product.' },
+      'Describe your work authorization status': { answerId: 5, answer: 'Should never be typed' },
+    }
+    const report = globalThis.JSA_FILL.fill(document, profile, null, answers)
+
+    expect(document.getElementById('why').value).toBe('I like the product.')
+    expect(document.getElementById('why').style.outline).toContain('solid')
+    expect(document.getElementById('auth').value).toBe('')
+    expect(document.getElementById('other').value).toBe('')
+    expect(report.answered).toEqual([{ question: 'Why do you want to work here?', answerId: 4 }])
+    expect(report.needsYou).toContain('Describe your work authorization status')
+  })
+})
