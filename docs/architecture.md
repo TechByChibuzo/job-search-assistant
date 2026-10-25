@@ -64,11 +64,11 @@ The API is the only thing that talks to the outside world, and it only reads fro
 | Component | Tech | Responsibility |
 |---|---|---|
 | `backend/` | Java 21, Spring Boot 3.5, JPA, Flyway, jsoup | REST API, job sources, background sync, tracker, AI calls |
-| `frontend/` | React 19, Vite, Tailwind CSS 4, TanStack Query, lucide icons | Inbox, companies, tracker board |
+| `frontend/` | React 19, Vite, Tailwind CSS 4, TanStack Query, lucide icons | Inbox, tracker board, people, companies |
 | Postgres 16 | Docker Compose | All state |
 | Browser extension | Chrome MV3, unpacked | Save a viewed profile; fill application forms (phase 4) |
 
-The backend is organised **by feature** rather than by layer (`company`, `job`, `job.source`, `tracker`), so each feature's entity, repository, service and controller sit together. See [ADR 0002](adr/0002-package-by-feature.md).
+The backend is organised **by feature** rather than by layer (`company`, `job`, `job.source`, `contact`, `tracker`), so each feature's entity, repository, service and controller sit together. See [ADR 0002](adr/0002-package-by-feature.md).
 
 ## 5. Job ingestion
 
@@ -210,14 +210,15 @@ The owner pastes a careers link. `AtsDetector` recognises the host and pulls out
 erDiagram
     COMPANY ||--o{ JOB : lists
     COMPANY ||--o{ CONTACT : employs
-    JOB ||--o| APPLICATION : "applied to (phase 2)"
-    CONTACT ||--o{ OUTREACH : "messaged in (phase 2)"
-    JOB |o--o{ OUTREACH : "about (phase 2)"
+    JOB ||--o| PURSUIT : "pursued as"
+    CONTACT ||--o{ OUTREACH : "messaged in"
+    JOB |o--o{ OUTREACH : about
+    OUTREACH ||--|{ OUTREACH_EVENT : "history of"
 
     COMPANY {
         bigint id PK
         text name
-        text ats "GREENHOUSE | LEVER | ASHBY | WORKDAY | AVATURE | AMAZON | GOOGLE | GOLDMAN"
+        text ats "GREENHOUSE | LEVER | ASHBY | WORKDAY | AVATURE | AMAZON | GOOGLE | GOLDMAN | MANUAL"
         text board
         text careers_url
         text search "comma-separated phrases"
@@ -242,57 +243,77 @@ erDiagram
         timestamptz last_seen_at
         timestamptz closed_at
         boolean baseline "seen on first import, not new"
+        boolean manual "added by link; syncs leave it alone"
     }
     CONTACT {
         bigint id PK
         bigint company_id FK
         text name
         text title
-        text kind "RECRUITER | ENGINEER | ALUMNI | OTHER"
+        text kind "RECRUITER | HIRING_MANAGER | ENGINEER | ALUMNI | OTHER"
         text linkedin_url
         text email
+        text notes
+    }
+    PURSUIT {
+        bigint id PK
+        bigint job_id FK "unique"
+        text stage "SAVED .. OFFER | CLOSED"
+        date applied_on
+        text resume_version
+        text notes
     }
     OUTREACH {
         bigint id PK
         bigint contact_id FK
-        bigint job_id FK
-        text channel "LINKEDIN | EMAIL"
-        text stage
-        timestamptz sent_at
+        bigint job_id FK "optional"
+        text channel "LINKEDIN | EMAIL | OTHER"
+        text status "AWAITING_REPLY | REPLIED | REFERRED | NO_REPLY | DECLINED"
+        text message
+        timestamptz first_sent_at
+        timestamptz last_contacted_at
+        int follow_ups
         date follow_up_on
     }
-    APPLICATION {
+    OUTREACH_EVENT {
         bigint id PK
-        bigint job_id FK
-        date applied_on
-        text resume_version
-        text stage
+        bigint outreach_id FK
+        text type "SENT | FOLLOW_UP | REPLIED | REFERRED | NO_REPLY | DECLINED | NOTE"
+        timestamptz at
+        text note
     }
 ```
 
 Schema changes go through Flyway migrations in `backend/src/main/resources/db/migration`. Hibernate only validates the schema; it never changes it.
 
-## 7. Tracker (phase 2)
+## 7. Tracker
 
-Every conversation and application moves through one pipeline:
+The tracker is organised around the **role** being pursued, because every referral ask is about a specific role. People and conversations hang off it.
+
+**A role (pursuit)** moves through `SAVED → REACHING_OUT → REFERRED → APPLIED → INTERVIEWING → OFFER`, or `CLOSED` at any point. Recording outreach moves it forward on its own; the owner can set any stage by hand.
+
+**A conversation (outreach)** is with one person, usually about one role:
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Contacted
-    Contacted --> Replied
-    Contacted --> FollowUpDue : about 5 days of silence
-    FollowUpDue --> Contacted : follow-up sent
+    [*] --> AwaitingReply : owner records a message they sent
+    AwaitingReply --> AwaitingReply : follow-up sent (reminder moves out)
+    AwaitingReply --> Replied
+    AwaitingReply --> Referred
+    AwaitingReply --> NoReply : owner gives up
+    AwaitingReply --> Declined
     Replied --> Referred
-    Referred --> Interviewing
-    Interviewing --> Offer
-    Contacted --> Closed
-    Replied --> Closed
-    Interviewing --> Closed
-    Offer --> [*]
-    Closed --> [*]
+    NoReply --> Replied : a late reply still counts
+    NoReply --> Referred
 ```
 
-`follow_up_on` is set when a message is sent and cleared when a reply is logged. The board's "Due today" column is a query on that date, so no background job is needed. Reply rates are grouped by message style to show what works.
+- **The app never sends anything.** The owner messages people on LinkedIn or by email and records it here.
+- **Follow-up reminders need no background job.** Sending sets `follow_up_on` to the send date plus `app.tracker.follow-up-after` (5 days); a follow-up pushes it out again; any outcome clears it. "Follow-ups due" is a query for conversations still awaiting a reply whose date has come.
+- **Roles move along on their own.** The first message about a role tracks it and makes it "reaching out"; a referral makes it "referred". Automatic moves only go forward and never reopen a closed role. Choosing "applied" records the date.
+- **Every step is an event** (`outreach_event`), so a conversation has a timeline, and reply rates by channel or message can be measured later (phase 6) without changing the schema.
+- **Rules live in the entities.** `Outreach.record` and `Pursuit.advanceTo` hold the state rules and are unit-tested without a database; the service handles loading, dates and cross-entity effects.
+
+**Roles from anywhere.** A role can be added by pasting its link (from LinkedIn, or a company whose site can't be read). It is saved under a company with that name, or a new company marked `MANUAL` that is never synced. Hand-added roles have `manual = true`: syncs leave them alone and the owner closes them. If the link turns out to be on a board the app can read, the app offers to track the whole company. The same link pasted twice returns the saved role.
 
 ## 8. Job-alert email import (phase 3)
 
@@ -350,7 +371,7 @@ Today the app runs on one machine. It is built so that hosting it later is a con
 |---|---|---|
 | 1 | Companies, link detection, Greenhouse/Lever/Ashby sync, jobs inbox with filters and "new" flag | Done |
 | 1.5 | Workday, Avature, Amazon, Google and Goldman Sachs sources; US-only and age rules; search phrases; background sync with progress; redesigned UI | Done |
-| 2 | Contacts, outreach and application tracker, follow-up reminders, paste-a-job-link | Planned |
+| 2 | Tracker: roles by stage, people, conversations with follow-up reminders, paste-a-job-link | Done |
 | 3 | Job-alert email import from a silent Gmail label (Microsoft, Meta, Apple, LinkedIn-only roles) | Planned |
 | 4 | AI match scoring and message drafting | Planned |
 | 5 | Browser extension: save profile, fill applications | Planned |
