@@ -21,7 +21,7 @@ const resume = {
   content: {
     name: 'Sam Rivera',
     contact: ['555-0100', 'sam@example.com', 'github.com/samrivera'],
-    contactChecked: true,
+    contactLinks: [null, 'mailto:sam@example.com', 'https://github.com/samrivera'],
     droppedSkills: ['Rust'],
     sections: [
       {

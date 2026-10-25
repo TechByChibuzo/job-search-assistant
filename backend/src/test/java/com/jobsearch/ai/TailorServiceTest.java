@@ -58,24 +58,28 @@ class TailorServiceTest {
                 Jane Doe. jane@example.com | github.com/janedoe. Experience. Software Engineer at Oracle Corporation.""");
         JsonNode answer = json.readTree("""
                 {"name": "Jane Doe", "contact": ["jane@example.com", "https://www.GitHub.com/janedoe/", "evil.example/login",
-                  "janedoe.github.com", "github.com/janedoe/../evil"], "sections": []}""");
+                  "janedoe.github.com", "github.com/janedoe/../evil", "jane@example.com?bcc=x@evil.io", "10.0.0.1"],
+                 "sections": []}""");
 
         JsonNode doc = service.checkResume(answer, withContact);
 
         // Links must match the resume's exactly, not just share its words
         assertThat(doc.path("contact").toString()).isEqualTo("[\"jane@example.com\",\"https://www.GitHub.com/janedoe/\"]");
-        assertThat(doc.path("droppedContact").toString()).contains("evil.example/login", "janedoe.github.com", "github.com/janedoe/../evil");
-        assertThat(doc.path("contactChecked").asBoolean()).isTrue();
+        assertThat(doc.path("droppedContact").toString()).contains("evil.example/login", "janedoe.github.com",
+                "github.com/janedoe/../evil", "jane@example.com?bcc=x@evil.io", "10.0.0.1");
+        assertThat(doc.path("contactLinks").toString())
+                .isEqualTo("[\"mailto:jane@example.com\",\"https://github.com/janedoe\"]");
     }
 
     @Test
     void refusesLinksItCannotCheckButKeepsPlainContactDetails() throws Exception {
         JsonNode answer = json.readTree("""
-                {"name": "Jane Doe", "contact": ["555-0100", "github.com/janedoe"], "sections": []}""");
+                {"name": "Jane Doe", "contact": ["555-0100", "github.com/janedoe", "a@b.co", "//evil.io", "1.2.3.4"], "sections": []}""");
 
         JsonNode doc = service.checkResume(answer, new SourceCheck(""));
 
         assertThat(doc.path("contact").toString()).isEqualTo("[\"555-0100\"]");
+        assertThat(doc.path("contactLinks").toString()).isEqualTo("[null]");
     }
 
     @Test

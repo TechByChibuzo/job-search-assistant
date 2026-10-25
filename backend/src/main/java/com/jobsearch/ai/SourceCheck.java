@@ -4,6 +4,9 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -25,40 +28,64 @@ public final class SourceCheck {
     private final String resume;
     private final Set<String> resumeWords;
     private final Set<String> resumeNumbers;
-    /** Emails and web addresses as the resume writes them, lightly normalised (see {@link #linkKey}). */
-    private final Set<String> resumeLinks;
+    /** Emails and web addresses in the resume, by {@link #linkKey}, to the href built from the resume's own text. */
+    private final Map<String, String> resumeLinks;
 
-    /** An email address, or a web address such as github.com/name, as a whole contact item. */
-    private static final Pattern LINK_ITEM = Pattern.compile(
-            "(?i)^(?:[^\\s@]+@[^\\s@]+\\.[^\\s@]+|(?:https?://)?(?:[\\w-]+\\.)+[a-z]{2,}(?:[/?#]\\S*)?)$");
     private static final Pattern LINK_IN_TEXT = Pattern.compile(
-            "(?i)[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+|(?:https?://)?(?:[\\w-]+\\.)+[a-z]{2,}(?:[/?#][\\w\\-./%?=&#~]*)?");
+            "(?i)[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+|(?:https?://)?(?:[\\w-]+\\.)+[a-z]{2,}(?:/[\\w\\-./%~]*)?");
+    private static final Pattern EMAIL = Pattern.compile("(?i)^[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+$");
+    /** Anything a browser could treat as an address: contains "@" or "/", or is a dotted name. */
+    private static final Pattern LINK_LIKE = Pattern.compile("[@/]|^\\S*\\.\\S*\\w$");
 
     public SourceCheck(String resumeText) {
         String raw = resumeText == null ? "" : resumeText;
         this.resume = normalize(raw);
         this.resumeWords = new HashSet<>(Arrays.asList(resume.split(" ")));
         this.resumeNumbers = numbers(raw);
-        this.resumeLinks = new HashSet<>();
+        this.resumeLinks = new HashMap<>();
         Matcher links = LINK_IN_TEXT.matcher(raw);
         while (links.find()) {
-            resumeLinks.add(linkKey(links.group()));
+            String link = links.group().replaceFirst("[/.,;:)]+$", "");
+            resumeLinks.putIfAbsent(linkKey(link), href(link));
         }
     }
 
     /**
-     * Whether a contact item may go on the page. An email or web address becomes a link, so it must match one
-     * in the resume exactly (apart from case, the scheme, "www." and a trailing slash): word overlap isn't
-     * enough, since "janedoe.github.com" has the same words as "github.com/janedoe". Without resume text to
-     * compare, links are refused. Anything else (a phone number, a city) is shown as text and needs its words
-     * in the resume.
+     * Whether a contact item may go on the page. Anything that looks like an address (it has "@" or "/", or is a
+     * dotted name) must match a link in the resume exactly, apart from case, the scheme, "www." and a trailing
+     * slash: word overlap isn't enough, since "janedoe.github.com" has the same words as "github.com/janedoe".
+     * Without resume text to compare, such items are refused. Anything else (a phone number, a city) is shown
+     * as plain text and needs its words in the resume.
      */
     public boolean contactAllowed(String item) {
         String text = item == null ? "" : item.strip();
-        if (LINK_ITEM.matcher(text).matches()) {
-            return available() && resumeLinks.contains(linkKey(text));
+        if (linkLike(text)) {
+            return contactLink(text).isPresent();
         }
         return mentions(text);
+    }
+
+    /**
+     * The href for a contact item that matches a link in the resume, built from the resume's own text (never
+     * from the item), so the page never links anything the resume doesn't contain.
+     */
+    public Optional<String> contactLink(String item) {
+        String text = item == null ? "" : item.strip();
+        if (!available() || !linkLike(text) || text.chars().anyMatch(Character::isWhitespace)) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(resumeLinks.get(linkKey(text)));
+    }
+
+    private static boolean linkLike(String text) {
+        return LINK_LIKE.matcher(text).find();
+    }
+
+    private static String href(String link) {
+        if (EMAIL.matcher(link).matches()) {
+            return "mailto:" + link;
+        }
+        return "https://" + link.replaceFirst("(?i)^https?://", "");
     }
 
     private static String linkKey(String link) {
