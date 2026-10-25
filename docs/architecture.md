@@ -214,6 +214,7 @@ erDiagram
     CONTACT ||--o{ OUTREACH : "messaged in"
     JOB |o--o{ OUTREACH : about
     OUTREACH ||--|{ OUTREACH_EVENT : "history of"
+    JOB ||--o{ TAILORED_DOCUMENT : "tailored for"
 
     COMPANY {
         bigint id PK
@@ -275,6 +276,7 @@ erDiagram
         timestamptz last_contacted_at
         int follow_ups
         date follow_up_on
+        boolean drafted "started as Claude's draft"
     }
     OUTREACH_EVENT {
         bigint id PK
@@ -282,6 +284,21 @@ erDiagram
         text type "SENT | FOLLOW_UP | REPLIED | REFERRED | NO_REPLY | DECLINED | NOTE"
         timestamptz at
         text note
+    }
+    TAILORED_DOCUMENT {
+        bigint id PK
+        bigint job_id FK
+        text kind "RESUME | COVER_LETTER"
+        text content "JSON, with what the check flagged"
+        text model
+        timestamptz created_at
+    }
+    ANSWER {
+        bigint id PK
+        text question
+        text answer
+        int uses
+        timestamptz updated_at
     }
 ```
 
@@ -311,7 +328,7 @@ stateDiagram-v2
 - **The app never sends anything.** The owner messages people on LinkedIn or by email and records it here.
 - **Follow-up reminders need no background job.** Sending sets `follow_up_on` to the send date plus `app.tracker.follow-up-after` (5 days); a follow-up pushes it out again; any outcome clears it. "Follow-ups due" is a query for conversations still awaiting a reply whose date has come.
 - **Roles move along on their own.** The first message about a role tracks it and makes it "reaching out"; a referral makes it "referred". Automatic moves only go forward and never reopen a closed role. Choosing "applied" records the date.
-- **Every step is an event** (`outreach_event`), so a conversation has a timeline, and reply rates by channel or message can be measured later (phase 6) without changing the schema.
+- **Every step is an event** (`outreach_event`), so a conversation has a timeline, and reply rates by channel, person or message are measured from it (section 11).
 - **Rules live in the entities.** `Outreach.record` and `Pursuit.advanceTo` hold the state rules and are unit-tested without a database; the service handles loading, dates and cross-entity effects.
 
 **Roles from anywhere.** A role can be added by pasting its link (from LinkedIn, or a company whose site can't be read). It is saved under a company with that name, or a new company marked `MANUAL` that is never synced. Hand-added roles have `manual = true`: syncs leave them alone and the owner closes them. If the link turns out to be on a board the app can read, the app offers to track the whole company. The same link pasted twice returns the saved role.
@@ -398,8 +415,11 @@ sequenceDiagram
         P->>A: POST /api/jobs
     else Application form
         P->>A: GET /api/profile, GET /api/profile/resume
-        P->>T: fill(profile, resume)
-        T-->>P: filled, left for the owner, resume attached
+        P->>T: questions()
+        T-->>P: long-answer questions on the page
+        P->>A: POST /api/answers/match
+        P->>T: fill(profile, resume, matched answers)
+        T-->>P: filled, answered, left for the owner, resume attached
         O->>T: checks, answers the rest, submits
         O->>P: I submitted it
         P->>A: POST /api/applications
@@ -409,7 +429,7 @@ sequenceDiagram
 - **Only on click.** Permissions are `activeTab`, `scripting` and `storage`; there are no content scripts that run on their own and no host access to LinkedIn or job sites. The page is read once, when the owner clicks, which is what copying from the screen would do. Nothing on LinkedIn is navigated, clicked or sent.
 - **Reading LinkedIn:** the profile's name, headline, current company and link; a job's title, company, location and link. Selectors fall back to the tab title, and the owner checks every field before saving.
 - **Filling forms:** text fields are matched to the profile by `autocomplete`, label, placeholder and field names (camelCase and underscores split into words, so Workday's `addressSection_city` reads as "city"). Values are set through the native setter and the events typing fires, so React forms (Workday, Ashby) notice. Filled fields are outlined in green.
-- **What it never touches:** questions matching work authorization, sponsorship, visa, EEO (gender, race, veteran, disability, pronouns), consent, certification or salary are outlined in amber and listed by question, never by option. Choices, checkboxes and long answers are left alone, nothing already typed is overwritten, and nothing is submitted.
+- **What it never touches:** questions matching work authorization, sponsorship, visa, EEO (gender, race, veteran, disability, pronouns), consent, certification or salary are outlined in amber and listed by question, never by option. Choices and checkboxes are left alone, long answers are filled only from the owner's answer bank (section 11), nothing already typed is overwritten, and nothing is submitted.
 - **Only what the owner can see.** A hostile page could hide fields (transparent, tiny, off-screen, or inside a hidden box) to collect details the owner never sees typed, so only fields with a real size, on the page, with nothing transparent or hidden around them are filled.
 - **The resume** is fetched from the app (`GET /api/profile/resume`, `no-store`) and attached to the upload that looks like the resume, never the cover letter. On Greenhouse, Lever, Ashby and Workday this happens by default; on any other site only when the owner ticks "Attach my resume", so an unfamiliar page can't collect it through a hidden upload.
 - **Recording the application** finds the role from the page's link (the posting link once `/apply` and the query are stripped, or a role whose id appears in it) or saves it as a hand-added role, tracks it, and sets it to Applied with the date and the resume file name.
@@ -418,12 +438,41 @@ sequenceDiagram
 
 The applicant profile (`applicant_profile`, one row) holds contact details, links, the current role and education; the app's **Profile** page edits it and can prefill it from the resume with Claude. Legal attestations are never stored.
 
-## 11. Cross-cutting concerns
+## 11. Applying: tailored documents, the answer bank and insights
+
+Three features for the application itself, all with the owner in charge of what goes out.
+
+**Tailored resume and cover letter.** From a role, Claude rewrites the resume for that posting, or writes a cover letter, as JSON matching a schema: sections, entries and bullets for a resume; greeting, paragraphs and closing for a letter. Rewording and reordering are allowed; inventing is not, and the app checks rather than trusts that:
+
+```mermaid
+flowchart LR
+    R[(resume PDF)] -->|as a document| C[Claude]
+    J[(job posting)] --> C
+    C -->|JSON: bullets, each with the resume line it came from| K[SourceCheck]
+    R -->|text, PDFBox| K
+    K -->|problems per bullet, unknown skills dropped| D[(tailored_document)]
+    D --> P[Printable page: owner fixes or removes flagged parts, prints to PDF]
+```
+
+- Each resume bullet carries the resume line it was rewritten from (`source`). `SourceCheck` reads the resume's text with PDFBox and flags a bullet whose source isn't in the resume (90% of its words must appear), and any number in a bullet, summary or letter paragraph that isn't in the resume ("60%" or "3x" can't appear from nowhere; years and single digits are ignored). Skills the resume never names are removed and listed.
+- Flagged parts are highlighted with the reason on the page, where the owner can edit them or remove them with one click. The highlights are screen-only; the page prints as a clean letter-size document (the app shell, buttons and marks are hidden by print CSS).
+- If the resume PDF has no readable text (a scan), nothing can be checked, and the page says so instead of implying the document passed.
+- Documents are stored as JSON (`tailored_document`, deleted with their role), so they can be reopened and edited. Generating one doesn't hold a database connection while Claude works (about 30 seconds at high effort).
+
+**Answer bank.** Application forms ask the same long questions ("Why do you want to work here?"). The owner keeps answers on the **Answers** page, written themselves or drafted by Claude from the resume (and the role, when opened from one). When filling a form, the extension sends the page's long-answer questions to `POST /api/answers/match`; `QuestionMatcher` compares word sets (Jaccard similarity over stemmed words, ignoring filler such as "please describe") and returns the best saved answer above 0.5. The extension types it into the box, outlines it in blue and lists it for the owner to read. Sensitive questions are never filled, whatever the bank holds, and a box that already has text is left alone. Each use is counted, so the answers used most come first.
+
+**Insights.** The **Insights** page answers "what gets replies?" from the tracker's conversations, by channel, by who was messaged, by message length (a connection note of 300 characters or less, or a longer message), by whether Claude drafted it, and by the number of follow-ups. Two rules keep the numbers honest:
+- A conversation counts toward a rate only once it is settled: answered, marked no reply, or a week old. A message sent yesterday doesn't count as unanswered.
+- A group with fewer than 5 settled conversations is drawn hatched and labelled an early signal, so one reply out of one doesn't read as a trend.
+
+Each bar is labelled with its count ("4 of 14") and its rate, and the same numbers are available as a table. The page also shows the median time to a first reply, roles by stage, and applications in the last week.
+
+## 12. Cross-cutting concerns
 
 | Concern | Approach |
 |---|---|
-| Security | One user on localhost. The API binds to `127.0.0.1` and has no login. The web app reaches it through the same origin (Vite proxy in development, nginx in Docker). Because a page on another site could still make the browser send a plain POST to localhost, every request that changes data must carry an `X-Requested-With` header the app adds; another site can only add it after a CORS preflight, which the API refuses for any origin but its own (CSRF protection without sessions). nginx sends a Content Security Policy and the usual hardening headers. Hosting it means adding auth first: see section 12. |
-| Personal data | The resume and answer bank live in `private/`, which git ignores. Nothing personal is committed. |
+| Security | One user on localhost. The API binds to `127.0.0.1` and has no login. The web app reaches it through the same origin (Vite proxy in development, nginx in Docker). Because a page on another site could still make the browser send a plain POST to localhost, every request that changes data must carry an `X-Requested-With` header the app adds; another site can only add it after a CORS preflight, which the API refuses for any origin but its own (CSRF protection without sessions). nginx sends a Content Security Policy and the usual hardening headers. Hosting it means adding auth first: see section 13. |
+| Personal data | The resume lives in `private/`, which git ignores; the profile, saved answers and tailored documents are in the local database. Nothing personal is committed. |
 | Third parties | Company logos are fetched once by the API (Google's favicon service, DuckDuckGo's as a fallback), stored in `company_logo`, and served by the app, so the browser never tells a third party which companies the owner looks at, and the Content Security Policy stays `img-src 'self'`. The services are asked *about* a domain and never sent to it, so an edited domain can't make the app request an internal address. A company's website is taken from its job links, a short list of known names, or a guess from its name that must return a real icon; the owner can correct it. |
 | Errors | One `@RestControllerAdvice` returns RFC 7807 problem details. Sync failures are stored per company, not thrown at the scheduler. |
 | Politeness | A descriptive `User-Agent`, timeouts, a delay between pages, a page cap, and one sync a day. No source that needs a login, token or bot check is read. |
@@ -431,7 +480,7 @@ The applicant profile (`applicant_profile`, one row) holds contact details, link
 | Observability | Actuator health with liveness and readiness probes; a log line per company per sync with counts. |
 | Cost | $0: public feeds, local Docker, free tiers only. |
 
-## 12. Deployment
+## 13. Deployment
 
 Today the app runs on one machine. It is built so that hosting it later is a contained change rather than a rewrite ([ADR 0005](adr/0005-deployable-by-design.md)):
 
@@ -448,7 +497,7 @@ Today the app runs on one machine. It is built so that hosting it later is a con
 3. **Secrets and personal data.** The database password, the Google client secret and the Anthropic API key from a secret store; the Gmail refresh token encrypted at rest (it is read-only, but still access to the owner's mail); the resume in encrypted storage rather than `private/`.
 4. **Multi-user, if ever.** A `user_id` on companies and everything below them. Nothing in the domain model assumes a single user beyond the missing column.
 
-## 13. Roadmap
+## 14. Roadmap
 
 | Phase | Scope | Status |
 |---|---|---|
@@ -458,4 +507,4 @@ Today the app runs on one machine. It is built so that hosting it later is a con
 | 3 | Job-alert email import from a silent Gmail label (Microsoft, Meta, Apple, LinkedIn-only roles) | Done; parsers to be tuned on real alerts |
 | 4 | AI match scores, best-fit sort, drafted connection notes, messages and follow-ups | Done |
 | 5 | Browser extension: save a viewed profile or role, fill applications, record them; applicant profile | Done |
-| 6 | Tailored resumes and cover letters, answer bank, reply-rate stats | Planned |
+| 6 | Tailored resumes and cover letters checked against the resume, answer bank filled by the extension, reply-rate insights | Done |

@@ -17,6 +17,9 @@ Then it keeps track of the referral hunt itself: the roles I'm pursuing, the peo
 - **Roles from anywhere.** Paste a link from LinkedIn or any careers site to add a role the app can't sync. If the link is on a board it can read, it offers to track the whole company.
 - **Your fit, at a glance.** Claude reads each new role against your resume and scores it from 0 to 100, with what matches and what's missing; the inbox can sort by best fit. It also drafts LinkedIn connection notes, messages and follow-ups from facts on your resume, for you to edit and send.
 - **A browser extension.** On a LinkedIn profile, one click saves the person to your People list; on a LinkedIn job, it adds the role. On an application form (Greenhouse, Lever, Ashby, Workday), it fills your details from your Profile and attaches your resume, leaves work-authorization, sponsorship and EEO questions for you, and never submits. After you submit, it records the application in the tracker. [Install](extension/README.md).
+- **A resume and cover letter for each role.** Claude rewrites your resume for a posting, or writes a cover letter, and the app checks the result against your real resume: a bullet whose source line isn't in it, or a number you never wrote ("cut latency by 60%"), is highlighted with the reason, and skills you don't list are dropped. Fix or remove what's flagged, then print it or save it as a PDF; the marks don't print.
+- **An answer bank.** Save your answers to the questions every form asks, or have Claude draft one for a role. On an application, the extension fills a long-answer box whose question matches a saved one and outlines it in blue for you to read.
+- **Insights.** Reply and referral rates by channel, by who you messaged, by message length, by whether Claude drafted it and by follow-ups. Rates only count conversations that have had a week to get a reply, and small groups are marked as early signals.
 - **Job-alert emails, silently.** For sites that can't be read (Microsoft, Meta, Apple) and LinkedIn-only roles, the app reads job-alert emails from a Gmail label each morning, read-only, and adds their roles to the inbox. A Gmail filter keeps the alerts out of your inbox, so they never buzz. [Setup guide](docs/gmail-setup.md).
 
 On a real run it kept about 1,460 relevant US roles from eight companies, including 654 software roles from Amazon, 305 from Google, 138 from Nvidia and 161 from Bloomberg.
@@ -30,11 +33,14 @@ On a real run it kept about 1,460 relevant US roles from eight companies, includ
   </tr>
 </table>
 
-## What's next
+<table>
+  <tr>
+    <td><img src="docs/images/tailored-resume.png" alt="A tailored resume, with a bullet flagged because its 60% figure isn't in the original resume (sample data)"></td>
+    <td><img src="docs/images/insights.png" alt="Insights: reply rate by channel, by who was messaged, by message length and by follow-ups (sample data)"></td>
+  </tr>
+</table>
 
-| Phase | Scope |
-|---|---|
-| 6 | Tailored resumes and cover letters, a reusable answer bank, reply-rate stats |
+<sub>These two screenshots use made-up sample data.</sub>
 
 ## How it's built
 
@@ -45,10 +51,10 @@ flowchart LR
     api -->|daily, read-only, paced| feeds[Greenhouse, Lever, Ashby APIs<br/>Workday, Avature, amazon.jobs,<br/>Google Careers, Goldman Sachs]
 ```
 
-- **Backend:** Java 21, Spring Boot 3.5, Spring Data JPA, Flyway, `RestClient`, jsoup, the Gmail API with Google OAuth, and Claude through the Anthropic Java SDK. Organised by feature (`company`, `job`, `job.source`, `contact`, `tracker`, `alerts`, `ai`). Each site is one class behind a `JobSource` interface.
+- **Backend:** Java 21, Spring Boot 3.5, Spring Data JPA, Flyway, `RestClient`, jsoup, the Gmail API with Google OAuth, and Claude through the Anthropic Java SDK. Organised by feature (`company`, `job`, `job.source`, `contact`, `tracker`, `alerts`, `ai`, `profile`, `answers`, `documents`). Each site is one class behind a `JobSource` interface.
 - **Extension:** Chrome Manifest V3 in plain JavaScript, with only `activeTab` access; the page reader and form filler are tested against sample pages and a real Lever form.
 - **Frontend:** React 19, Vite, Tailwind CSS 4, TanStack Query, lucide icons. Filters and the open role live in the URL, so any view can be bookmarked. Light and dark themes.
-- **Tests:** 305 in total. Every site source is tested against a trimmed copy of a real response, and the alert parsers against sample emails; the sync and the REST API run against real Postgres via Testcontainers; UI components are tested with Vitest and Testing Library. CI runs everything on every push.
+- **Tests:** 334 in total. Every site source is tested against a trimmed copy of a real response, and the alert parsers against sample emails; the sync and the REST API run against real Postgres via Testcontainers; UI components are tested with Vitest and Testing Library. CI runs everything on every push.
 
 The full design, with diagrams of the sync, the data model, the deployment path and the roadmap, is in [docs/architecture.md](docs/architecture.md). The decisions with real trade-offs are in [docs/adr](docs/adr).
 
@@ -130,5 +136,10 @@ cd frontend && npm test && npm run lint
 | `POST` | `/api/profile/from-resume` | Claude's reading of your resume, to review before saving |
 | `GET` | `/api/profile/resume` | The resume file, for the extension to attach |
 | `POST` | `/api/applications` | Record an application: tracks the role as Applied |
+| `GET` `POST` | `/api/jobs/{id}/documents` | A role's tailored documents; tailor a resume or write a cover letter (`{"kind": "RESUME"}`) |
+| `GET` `PATCH` `DELETE` | `/api/documents/{id}` | One tailored document; save edits |
+| `GET` `POST` `PATCH` `DELETE` | `/api/answers?q=`, `/api/answers/{id}` | The answer bank |
+| `POST` | `/api/answers/match`, `/api/answers/draft`, `/api/answers/{id}/used` | Match a form's questions to saved answers; draft one with Claude; count a use |
+| `GET` | `/api/insights` | Reply and referral rates by group, time to reply, roles by stage |
 
 Errors are RFC 7807 problem details.

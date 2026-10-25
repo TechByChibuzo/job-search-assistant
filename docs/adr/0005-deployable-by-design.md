@@ -17,7 +17,7 @@ Build for one machine, but keep every choice compatible with hosting:
 - **Same-origin web app.** nginx serves the static build and proxies `/api`, with a Content Security Policy and hardening headers.
 - **A stateless API**, except for the sync run state and lock, which are kept in memory deliberately and documented as the first thing to move to the database.
 
-Authentication is not built yet, because there is no network exposure to protect. It is the first item on the hosting checklist in docs/architecture.md, section 12.
+Authentication is not built yet, because there is no network exposure to protect. It is the first item on the hosting checklist in docs/architecture.md, section 13.
 
 ## Consequences
 
