@@ -2,11 +2,22 @@ package com.jobsearch.company;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class AtsDetectorTest {
+
+    @Test
+    void checksBoardsTypedByHand() {
+        assertThat(detector.normalize(AtsType.LEVER, " Palantir ")).contains(new DetectedBoard(AtsType.LEVER, "palantir"));
+        assertThat(detector.normalize(AtsType.WORKDAY, "NVIDIA.wd5/NVIDIAExternalCareerSite"))
+                .contains(new DetectedBoard(AtsType.WORKDAY, "nvidia.wd5/NVIDIAExternalCareerSite"));
+        assertThat(detector.normalize(AtsType.WORKDAY, "nvidia")).isEmpty();
+        assertThat(detector.normalize(AtsType.AVATURE, "bloomberg")).isEmpty();
+        assertThat(detector.normalize(AtsType.AMAZON, "")).isEmpty();
+    }
 
     private final AtsDetector detector = new AtsDetector();
 
@@ -22,6 +33,15 @@ class AtsDetectorTest {
         "https://jobs.ashbyhq.com/openai, ASHBY, openai",
         "https://JOBS.ASHBYHQ.COM/OpenAI/240d459b, ASHBY, openai",
         "https://api.ashbyhq.com/posting-api/job-board/openai, ASHBY, openai",
+        "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite, WORKDAY, nvidia.wd5/NVIDIAExternalCareerSite",
+        "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/CA/Engineer_JR1, WORKDAY, salesforce.wd12/External_Career_Site",
+        "https://Adobe.wd5.myworkdayjobs.com/wday/cxs/adobe/external_experienced/jobs, WORKDAY, adobe.wd5/external_experienced",
+        "https://bloomberg.avature.net/careers, AVATURE, bloomberg/careers",
+        "https://bloomberg.avature.net/careers/JobDetail/Engineer/45808, AVATURE, bloomberg/careers",
+        "https://www.amazon.jobs/en/search?base_query=engineer, AMAZON, amazon",
+        "amazon.jobs, AMAZON, amazon",
+        "https://www.google.com/about/careers/applications/jobs/results, GOOGLE, google",
+        "https://careers.google.com/jobs/results/, GOOGLE, google",
     })
     void recognisesBoardLinks(String url, AtsType ats, String board) {
         assertThat(detector.detect(url)).contains(new DetectedBoard(ats, board));
@@ -38,6 +58,9 @@ class AtsDetectorTest {
         "https://boards.greenhouse.io/embed/job_board",
         "https://jobs.lever.co/<script>",
         "https://myworkdayjobs.com/en-US/External",
+        "https://nvidia.wd5.myworkdayjobs.com/",
+        "https://www.google.com/search?q=jobs",
+        "https://careers.microsoft.com/v2/global/en/home.html",
     })
     void rejectsLinksItCannotRead(String url) {
         assertThat(detector.detect(url)).isEmpty();

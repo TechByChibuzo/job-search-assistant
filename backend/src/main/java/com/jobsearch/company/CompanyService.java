@@ -1,7 +1,6 @@
 package com.jobsearch.company;
 
 import java.util.List;
-import java.util.Locale;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,14 +45,17 @@ public class CompanyService {
 
     @Transactional
     public Company create(CreateCompanyRequest request) {
-        DetectedBoard board = request.ats() != null && notBlank(request.board())
-                ? new DetectedBoard(request.ats(), request.board().strip().toLowerCase(Locale.ROOT))
+        DetectedBoard board = request.ats() != null
+                ? detector.normalize(request.ats(), request.board()).orElseThrow(() -> new BadRequestException(
+                        "'" + request.board() + "' isn't a valid " + request.ats() + " board"))
                 : detect(request.careersUrl());
         if (companies.existsByAtsAndBoard(board.ats(), board.board())) {
             throw new ConflictException("Already tracking the " + board.ats() + " board '" + board.board() + "'");
         }
         String name = notBlank(request.name()) ? request.name().strip() : nameFromBoard(board.board());
-        return companies.save(new Company(name, board, blankToNull(request.careersUrl())));
+        Company company = new Company(name, board, blankToNull(request.careersUrl()));
+        company.setSearch(request.search());
+        return companies.save(company);
     }
 
     @Transactional
@@ -64,6 +66,9 @@ public class CompanyService {
         }
         if (request.active() != null) {
             company.setActive(request.active());
+        }
+        if (request.search() != null) {
+            company.setSearch(request.search());
         }
         if (notBlank(request.careersUrl())) {
             DetectedBoard board = detect(request.careersUrl());
@@ -82,10 +87,14 @@ public class CompanyService {
         companies.delete(get(id));
     }
 
-    /** "palantir" → "Palantir", "scale-ai" → "Scale Ai": a starting point the owner can rename. */
+    /**
+     * "palantir" → "Palantir", "scale-ai" → "Scale Ai", "nvidia.wd5/NVIDIAExternalCareerSite" → "Nvidia":
+     * a starting point the owner can rename.
+     */
     static String nameFromBoard(String board) {
+        String company = board.contains("/") ? board.substring(0, board.indexOf('/')).replaceFirst("\\.wd\\d+$", "") : board;
         StringBuilder name = new StringBuilder();
-        for (String word : board.split("[-_.]+")) {
+        for (String word : company.split("[-_.]+")) {
             if (word.isEmpty()) {
                 continue;
             }

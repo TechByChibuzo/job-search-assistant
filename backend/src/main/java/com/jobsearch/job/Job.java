@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToOne;
 
 import com.jobsearch.company.Company;
 import com.jobsearch.job.source.FetchedJob;
+import com.jobsearch.job.source.Region;
 import com.jobsearch.job.source.Workplace;
 
 /**
@@ -42,6 +43,9 @@ public class Job {
     @Enumerated(EnumType.STRING)
     private Workplace workplace;
 
+    @Enumerated(EnumType.STRING)
+    private Region region;
+
     private Instant postedAt;
 
     private String url;
@@ -54,12 +58,19 @@ public class Job {
 
     private Instant closedAt;
 
+    /**
+     * Imported on the company's first sync and already older than the "new" window, so it is shown as seen
+     * rather than new. Without this, adding a company would mark its whole board as new.
+     */
+    private boolean baseline;
+
     protected Job() {}
 
-    Job(Company company, FetchedJob fetched, Instant now) {
+    Job(Company company, FetchedJob fetched, Instant now, boolean baseline) {
         this.company = company;
         this.externalId = fetched.externalId();
         this.firstSeenAt = now;
+        this.baseline = baseline;
         apply(fetched, now);
     }
 
@@ -69,6 +80,7 @@ public class Job {
         this.team = fetched.team();
         this.location = fetched.location();
         this.workplace = fetched.workplace();
+        this.region = fetched.region();
         this.postedAt = fetched.postedAt();
         this.url = fetched.url();
         this.description = fetched.description();
@@ -78,6 +90,22 @@ public class Job {
 
     void close(Instant now) {
         this.closedAt = now;
+    }
+
+    /** New means first seen after {@code since}, and not part of a company's first import. */
+    public boolean isNewSince(Instant since) {
+        return !baseline && firstSeenAt.isAfter(since);
+    }
+
+    /**
+     * When the role was listed: its posting date, or for a feed without dates, when the app first saw it.
+     * Null for an undated role from a company's first import, whose age is unknown.
+     */
+    public Instant getListedAt() {
+        if (postedAt != null) {
+            return postedAt;
+        }
+        return baseline ? null : firstSeenAt;
     }
 
     public boolean isOpen() {
@@ -110,6 +138,14 @@ public class Job {
 
     public Workplace getWorkplace() {
         return workplace;
+    }
+
+    public Region getRegion() {
+        return region;
+    }
+
+    public boolean isBaseline() {
+        return baseline;
     }
 
     public Instant getPostedAt() {

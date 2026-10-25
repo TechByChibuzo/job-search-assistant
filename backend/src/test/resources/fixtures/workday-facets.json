@@ -1,0 +1,113 @@
+{
+  "total": 2000,
+  "jobPostings": [],
+  "facets": [
+    {
+      "facetParameter": "jobFamilyGroup",
+      "descriptor": "Job Category",
+      "values": [
+        {
+          "descriptor": "Engineering",
+          "id": "0c40f6bd1d8f10ae43ffaefd46dc7e78",
+          "count": 1746
+        },
+        {
+          "descriptor": "Sales",
+          "id": "0c40f6bd1d8f10ae43ffcac5bbec7e90",
+          "count": 325
+        }
+      ]
+    },
+    {
+      "facetParameter": "workerSubType",
+      "descriptor": "Job Type",
+      "values": [
+        {
+          "descriptor": "Regular Employee",
+          "id": "0c40f6bd1d8f10adf6dae161b1844a15",
+          "count": 2268
+        },
+        {
+          "descriptor": "Management",
+          "id": "0c40f6bd1d8f10adf6dae2cd57444a16",
+          "count": 198
+        }
+      ]
+    },
+    {
+      "facetParameter": "timeType",
+      "descriptor": "Time Type",
+      "values": [
+        {
+          "descriptor": "Full time",
+          "id": "5509c0b5959810ac0029943377d47364",
+          "count": 2732
+        },
+        {
+          "descriptor": "Part time",
+          "id": "5509c0b5959810ac00299430e7947363",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "facetParameter": "locationMainGroup",
+      "values": [
+        {
+          "facetParameter": "locationHierarchy2",
+          "descriptor": "Location Type",
+          "values": [
+            {
+              "descriptor": "Office",
+              "id": "0c3f5f117e9a0101f6422f0fe79d0000",
+              "count": 2581
+            },
+            {
+              "descriptor": "Remote",
+              "id": "0c3f5f117e9a0101f63dc469c3010000",
+              "count": 571
+            }
+          ]
+        },
+        {
+          "facetParameter": "locationHierarchy1",
+          "descriptor": "Locations",
+          "values": [
+            {
+              "descriptor": "Germany",
+              "id": "2fcb99c455831013ea52adc65f5d3254",
+              "count": 43
+            },
+            {
+              "descriptor": "India",
+              "id": "2fcb99c455831013ea52b82135ba3266",
+              "count": 246
+            },
+            {
+              "descriptor": "United States",
+              "id": "2fcb99c455831013ea52fb338f2932d8",
+              "count": 1431
+            }
+          ]
+        },
+        {
+          "facetParameter": "locations",
+          "descriptor": "Sites",
+          "values": [
+            {
+              "descriptor": "Armenia, Remote",
+              "id": "d21cf68980ad01f2f9f0b1bdb5075e07",
+              "count": 3
+            },
+            {
+              "descriptor": "Armenia, Yerevan",
+              "id": "c0ed409f79231000eaff724467330000",
+              "count": 4
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "userAuthenticated": false
+}

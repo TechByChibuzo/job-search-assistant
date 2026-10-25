@@ -21,22 +21,35 @@ spring:
 server:
   # Single user on their own machine: never listen on the network (ADR 0001)
   address: ${SERVER_ADDRESS:127.0.0.1}
-  port: 8080
+  port: ${PORT:8080}
+  # Finish in-flight requests on shutdown, and trust X-Forwarded-* from a reverse proxy (ADR 0005)
+  shutdown: graceful
+  forward-headers-strategy: native
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
 
 app:
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
   sync:
-    enabled: true
-    # Daily at 07:00 local time
-    cron: "0 0 7 * * *"
+    enabled: ${SYNC_ENABLED:true}
+    # Daily at 07:00 in the server's time zone (set TZ in docker-compose.yml)
+    cron: ${SYNC_CRON:0 0 7 * * *}
   http:
-    user-agent: "job-search-assistant/0.1 (personal job search; one request per board per day)"
+    user-agent: "job-search-assistant/0.1 (personal job search; one sync a day)"
+    # Search-based feeds (Amazon, Google, Workday) take many pages; space them out like a person would
+    page-delay: 750ms
+    max-pages: 60
   jobs:
     new-window: 24h
+    # Roles posted longer ago than this aren't imported
+    max-age: ${JOBS_MAX_AGE:30d}
+    us-only: ${JOBS_US_ONLY:true}

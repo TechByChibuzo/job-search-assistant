@@ -4,17 +4,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.jobsearch.company.AtsType;
+import com.jobsearch.job.source.FetchQuery;
+import com.jobsearch.job.source.FetchResult;
 import com.jobsearch.job.source.FetchedJob;
 import com.jobsearch.job.source.JobSource;
 
 /** Stands in for an ATS: tests set what the feed returns, or what it throws, before each sync. */
 class FakeJobSource implements JobSource {
 
-    private List<FetchedJob> feed = new ArrayList<>();
+    private FetchResult feed = FetchResult.complete(new ArrayList<>());
     private RuntimeException failure;
+    FetchQuery lastQuery;
 
     void returns(FetchedJob... jobs) {
-        this.feed = List.of(jobs);
+        returns(FetchResult.complete(List.of(jobs)));
+    }
+
+    void returns(FetchResult result) {
+        this.feed = result;
         this.failure = null;
     }
 
@@ -28,7 +35,8 @@ class FakeJobSource implements JobSource {
     }
 
     @Override
-    public List<FetchedJob> fetch(String board) {
+    public FetchResult fetch(String board, FetchQuery query) {
+        this.lastQuery = query;
         if (failure != null) {
             throw failure;
         }

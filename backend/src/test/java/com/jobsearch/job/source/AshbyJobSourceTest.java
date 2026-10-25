@@ -34,7 +34,7 @@ class AshbyJobSourceTest {
         server.expect(requestTo(URL))
                 .andRespond(withSuccess(Fixtures.read("ashby-job-board.json"), MediaType.APPLICATION_JSON));
 
-        List<FetchedJob> jobs = source.fetch("openai");
+        List<FetchedJob> jobs = source.fetch("openai", Fixtures.ALL).jobs();
 
         assertThat(jobs).hasSize(2);
         FetchedJob data = jobs.getFirst();
@@ -52,7 +52,7 @@ class AshbyJobSourceTest {
         server.expect(requestTo(URL))
                 .andRespond(withSuccess(Fixtures.read("ashby-job-board.json"), MediaType.APPLICATION_JSON));
 
-        List<FetchedJob> jobs = source.fetch("openai");
+        List<FetchedJob> jobs = source.fetch("openai", Fixtures.ALL).jobs();
 
         // The first job has workplaceType "Hybrid" and isRemote true; the second has neither
         assertThat(jobs).extracting(FetchedJob::workplace).containsExactly(Workplace.HYBRID, Workplace.UNKNOWN);
@@ -69,13 +69,13 @@ class AshbyJobSourceTest {
         server.expect(requestTo("https://api.ashbyhq.com/posting-api/job-board/acme"))
                 .andRespond(withSuccess(feed, MediaType.APPLICATION_JSON));
 
-        assertThat(source.fetch("acme")).extracting(FetchedJob::title).containsExactly("Listed");
+        assertThat(source.fetch("acme", Fixtures.ALL).jobs()).extracting(FetchedJob::title).containsExactly("Listed");
     }
 
     @Test
     void reportsAMissingBoard() {
         server.expect(requestTo(URL)).andRespond(withResourceNotFound());
 
-        assertThatThrownBy(() -> source.fetch("openai")).isInstanceOf(BoardNotFoundException.class);
+        assertThatThrownBy(() -> source.fetch("openai", Fixtures.ALL).jobs()).isInstanceOf(BoardNotFoundException.class);
     }
 }

@@ -34,7 +34,7 @@ class GreenhouseJobSourceTest {
         server.expect(requestTo(URL))
                 .andRespond(withSuccess(Fixtures.read("greenhouse-jobs.json"), MediaType.APPLICATION_JSON));
 
-        List<FetchedJob> jobs = source.fetch("airbnb");
+        List<FetchedJob> jobs = source.fetch("airbnb", Fixtures.ALL).jobs();
 
         assertThat(jobs).hasSize(2);
         FetchedJob legal = jobs.getFirst();
@@ -53,7 +53,7 @@ class GreenhouseJobSourceTest {
         server.expect(requestTo(URL))
                 .andRespond(withSuccess(Fixtures.read("greenhouse-jobs.json"), MediaType.APPLICATION_JSON));
 
-        FetchedJob remote = source.fetch("airbnb").get(1);
+        FetchedJob remote = source.fetch("airbnb", Fixtures.ALL).jobs().get(1);
 
         assertThat(remote.workplace()).isEqualTo(Workplace.REMOTE);
         assertThat(remote.location()).isEqualTo("United States");
@@ -63,6 +63,6 @@ class GreenhouseJobSourceTest {
     void reportsAMissingBoard() {
         server.expect(requestTo(URL)).andRespond(withResourceNotFound());
 
-        assertThatThrownBy(() -> source.fetch("airbnb")).isInstanceOf(BoardNotFoundException.class);
+        assertThatThrownBy(() -> source.fetch("airbnb", Fixtures.ALL).jobs()).isInstanceOf(BoardNotFoundException.class);
     }
 }

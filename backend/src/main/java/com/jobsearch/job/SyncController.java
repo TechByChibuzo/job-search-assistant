@@ -1,27 +1,42 @@
 package com.jobsearch.job;
 
-import java.util.List;
-
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.jobsearch.company.CompanyService;
+import com.jobsearch.job.SyncRunner.SyncProgress;
+
+/** Starts syncs in the background (202 Accepted) and reports their progress. */
 @RestController
 class SyncController {
 
-    private final JobSyncService sync;
+    private final SyncRunner runner;
+    private final CompanyService companies;
 
-    SyncController(JobSyncService sync) {
-        this.sync = sync;
+    SyncController(SyncRunner runner, CompanyService companies) {
+        this.runner = runner;
+        this.companies = companies;
+    }
+
+    @GetMapping("/api/sync")
+    SyncProgress progress() {
+        return runner.current();
     }
 
     @PostMapping("/api/sync")
-    List<SyncResult> syncAll() {
-        return sync.syncAll();
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    SyncProgress syncAll() {
+        return runner.start(null);
     }
 
     @PostMapping("/api/companies/{id}/sync")
-    SyncResult syncCompany(@PathVariable long id) {
-        return sync.sync(id);
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    SyncProgress syncCompany(@PathVariable long id) {
+        companies.get(id); // 404 now, rather than a failed run later
+        return runner.start(id);
     }
 }

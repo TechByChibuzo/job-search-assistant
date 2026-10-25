@@ -26,7 +26,7 @@ class LeverJobSource implements JobSource {
     }
 
     @Override
-    public List<FetchedJob> fetch(String board) {
+    public FetchResult fetch(String board, FetchQuery query) {
         Posting[] postings = http.get()
                 .uri("/{board}?mode=json", board)
                 .retrieve()
@@ -35,9 +35,9 @@ class LeverJobSource implements JobSource {
                 })
                 .body(Posting[].class);
         if (postings == null) {
-            return List.of();
+            return FetchResult.complete(List.of());
         }
-        return Arrays.stream(postings).map(LeverJobSource::toFetched).toList();
+        return FetchResult.complete(Arrays.stream(postings).map(LeverJobSource::toFetched).toList());
     }
 
     private static FetchedJob toFetched(Posting p) {
@@ -49,6 +49,7 @@ class LeverJobSource implements JobSource {
                 team,
                 c.location(),
                 Workplace.fromLabel(p.workplaceType()).orFromLocation(c.location()),
+                p.country() != null ? Region.fromCountry(p.country()) : Region.fromLocation(c.location()),
                 p.createdAt() == null ? null : Instant.ofEpochMilli(p.createdAt()),
                 p.hostedUrl(),
                 description(p));
@@ -78,6 +79,7 @@ class LeverJobSource implements JobSource {
             String hostedUrl,
             Categories categories,
             String workplaceType,
+            String country,
             Long createdAt,
             String descriptionPlain,
             List<Section> lists,

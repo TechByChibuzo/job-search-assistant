@@ -1,5 +1,6 @@
 package com.jobsearch.job;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,6 +26,23 @@ interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecut
 
     @Query("select j.company.id as companyId, count(j) as openJobs from Job j where j.closedAt is null group by j.company.id")
     List<OpenJobCount> countOpenByCompany();
+
+    /** New roles per company: first seen after {@code since}, not part of a first import, still open. */
+    @Query("""
+            select j.company.id as companyId, j.company.name as companyName, count(j) as newJobs
+            from Job j
+            where j.closedAt is null and j.baseline = false and j.firstSeenAt > :since
+            group by j.company.id, j.company.name
+            order by count(j) desc, j.company.name""")
+    List<NewJobCount> countNewByCompany(Instant since);
+
+    interface NewJobCount {
+        Long getCompanyId();
+
+        String getCompanyName();
+
+        Long getNewJobs();
+    }
 
     interface OpenJobCount {
         Long getCompanyId();

@@ -1,6 +1,8 @@
 package com.jobsearch.company;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -25,6 +27,9 @@ public class Company {
     private String board;
 
     private String careersUrl;
+
+    /** Comma-separated search phrases; null means every role. */
+    private String search;
 
     private boolean active = true;
 
@@ -60,6 +65,22 @@ public class Company {
         this.lastSyncStatus = status;
         this.lastSyncedAt = at;
         this.lastSyncError = error;
+    }
+
+    public void setSearch(String search) {
+        this.search = search == null || search.isBlank() ? null : search.strip();
+    }
+
+    /** "software engineer, backend" → ["software engineer", "backend"]. */
+    public List<String> getSearches() {
+        if (search == null) {
+            return List.of();
+        }
+        return Arrays.stream(search.split(",")).map(String::strip).filter(s -> !s.isEmpty()).distinct().toList();
+    }
+
+    public String getSearch() {
+        return search;
     }
 
     public void rename(String name) {

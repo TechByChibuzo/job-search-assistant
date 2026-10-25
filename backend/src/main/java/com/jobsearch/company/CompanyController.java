@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.jobsearch.company.CompanyDtos.CompanyResponse;
 import com.jobsearch.company.CompanyDtos.CreateCompanyRequest;
 import com.jobsearch.company.CompanyDtos.DetectRequest;
+import com.jobsearch.company.CompanyDtos.DetectResponse;
 import com.jobsearch.company.CompanyDtos.UpdateCompanyRequest;
 
 @RestController
@@ -48,8 +49,8 @@ class CompanyController {
 
     /** Previews what a careers link resolves to, before the owner saves it. */
     @PostMapping("/detect")
-    DetectedBoard detect(@Valid @RequestBody DetectRequest request) {
-        return service.detect(request.careersUrl());
+    DetectResponse detect(@Valid @RequestBody DetectRequest request) {
+        return DetectResponse.of(service.detect(request.careersUrl()));
     }
 
     @PostMapping

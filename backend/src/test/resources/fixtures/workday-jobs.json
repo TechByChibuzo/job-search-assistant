@@ -1,0 +1,34 @@
+{
+  "total": 1431,
+  "jobPostings": [
+    {
+      "title": "Senior Linux Systems Engineer - EDA Infrastructure",
+      "externalPath": "/job/US-CA-Remote/Senior-Linux-Systems-Engineer---EDA-Infrastructure_JR2025019",
+      "locationsText": "6 Locations",
+      "postedOn": "Posted Yesterday",
+      "bulletFields": [
+        "JR2025019"
+      ]
+    },
+    {
+      "title": "Senior Systems Software Engineer- EDA Infrastructure",
+      "externalPath": "/job/US-CA-Remote/Senior-Systems-Software-Engineer--EDA-Infrastructure_JR2024972-1",
+      "locationsText": "6 Locations",
+      "postedOn": "Posted Yesterday",
+      "bulletFields": [
+        "JR2024972"
+      ]
+    },
+    {
+      "title": "Distinguished Engineer, Security Architecture  - DGX Cloud",
+      "externalPath": "/job/US-WA-Remote/Distinguished-Engineer--Security-Architecture----DGX-Cloud_JR2026131",
+      "locationsText": "US, WA, Remote",
+      "postedOn": "Posted Yesterday",
+      "bulletFields": [
+        "JR2026131"
+      ]
+    }
+  ],
+  "facets": [],
+  "userAuthenticated": false
+}

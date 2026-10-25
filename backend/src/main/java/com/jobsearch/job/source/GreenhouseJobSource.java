@@ -27,7 +27,7 @@ class GreenhouseJobSource implements JobSource {
     }
 
     @Override
-    public List<FetchedJob> fetch(String board) {
+    public FetchResult fetch(String board, FetchQuery query) {
         Response response = http.get()
                 .uri("/{board}/jobs?content=true", board)
                 .retrieve()
@@ -36,9 +36,9 @@ class GreenhouseJobSource implements JobSource {
                 })
                 .body(Response.class);
         if (response == null || response.jobs() == null) {
-            return List.of();
+            return FetchResult.complete(List.of());
         }
-        return response.jobs().stream().map(GreenhouseJobSource::toFetched).toList();
+        return FetchResult.complete(response.jobs().stream().map(GreenhouseJobSource::toFetched).toList());
     }
 
     private static FetchedJob toFetched(Job job) {
@@ -51,9 +51,19 @@ class GreenhouseJobSource implements JobSource {
                 team,
                 location,
                 Workplace.fromLabel(workplaceType(job)).orFromLocation(location),
+                region(job, location),
                 posted == null ? null : posted.toInstant(),
                 job.absoluteUrl(),
                 Html.escapedToText(job.content()));
+    }
+
+    /** The location text first; for multi-site roles ("2 locations") the office list says where. */
+    private static Region region(Job job, String location) {
+        Region fromLocation = Region.fromLocation(location);
+        if (fromLocation != Region.UNKNOWN || job.offices() == null || job.offices().isEmpty()) {
+            return fromLocation;
+        }
+        return Region.anyOf(job.offices().stream().map(o -> Region.fromLocation(o.location())).toList());
     }
 
     /** Greenhouse has no workplace field; many companies add a "Workplace Type" custom field instead. */
@@ -78,12 +88,15 @@ class GreenhouseJobSource implements JobSource {
             @JsonProperty("absolute_url") String absoluteUrl,
             Named location,
             List<Named> departments,
+            List<Office> offices,
             List<Metadata> metadata,
             @JsonProperty("first_published") OffsetDateTime firstPublished,
             @JsonProperty("updated_at") OffsetDateTime updatedAt,
             String content) {}
 
     record Named(String name) {}
+
+    record Office(String location) {}
 
     /** Custom fields; the value can be text, a boolean, a list or null. */
     record Metadata(String name, JsonNode value) {}

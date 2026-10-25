@@ -37,7 +37,7 @@ class LeverJobSourceTest {
         server.expect(requestTo(URL))
                 .andRespond(withSuccess(Fixtures.read("lever-postings.json"), MediaType.APPLICATION_JSON));
 
-        List<FetchedJob> jobs = source.fetch("spotify");
+        List<FetchedJob> jobs = source.fetch("spotify", Fixtures.ALL).jobs();
 
         assertThat(jobs).extracting(FetchedJob::workplace).containsExactly(Workplace.REMOTE, Workplace.ONSITE);
         FetchedJob first = jobs.getFirst();
@@ -62,7 +62,7 @@ class LeverJobSourceTest {
         server.expect(requestTo("https://api.lever.co/v0/postings/acme?mode=json"))
                 .andRespond(withSuccess(posting, MediaType.APPLICATION_JSON));
 
-        FetchedJob job = source.fetch("acme").getFirst();
+        FetchedJob job = source.fetch("acme", Fixtures.ALL).jobs().getFirst();
 
         assertThat(job.description()).isEqualTo("Intro.\n\nWhat you'll do\n• Build\n• Ship\n\nBenefits.");
         assertThat(job.team()).isEqualTo("Engineering");
@@ -76,14 +76,14 @@ class LeverJobSourceTest {
                 .body("{\"ok\":false,\"error\":\"Document not found\"}")
                 .contentType(MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> source.fetch("spotify")).isInstanceOf(BoardNotFoundException.class);
+        assertThatThrownBy(() -> source.fetch("spotify", Fixtures.ALL).jobs()).isInstanceOf(BoardNotFoundException.class);
     }
 
     @Test
     void otherFailuresAreNotMistakenForAMissingBoard() {
         server.expect(requestTo(URL)).andRespond(withServerError());
 
-        assertThatThrownBy(() -> source.fetch("spotify"))
+        assertThatThrownBy(() -> source.fetch("spotify", Fixtures.ALL).jobs())
                 .isInstanceOf(RestClientException.class)
                 .isNotInstanceOf(BoardNotFoundException.class);
     }

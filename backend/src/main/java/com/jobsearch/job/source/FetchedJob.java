@@ -9,6 +9,7 @@ public record FetchedJob(
         String team,
         String location,
         Workplace workplace,
+        Region region,
         Instant postedAt,
         String url,
         String description) {
@@ -19,6 +20,7 @@ public record FetchedJob(
         team = clean(team);
         location = clean(location);
         workplace = workplace == null ? Workplace.UNKNOWN : workplace;
+        region = region == null || region == Region.UNKNOWN ? Region.fromLocation(location) : region;
     }
 
     private static String clean(String s) {

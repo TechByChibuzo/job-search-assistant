@@ -1,3 +1,5 @@
 app:
   sync:
     enabled: false
+  http:
+    page-delay: 0ms
