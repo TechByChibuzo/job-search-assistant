@@ -40,7 +40,7 @@ flowchart LR
     end
     gh[Greenhouse, Lever, Ashby<br/>public job APIs]
     lv[Workday, Avature<br/>career sites]
-    ab[amazon.jobs,<br/>Google Careers]
+    ab[amazon.jobs, Google Careers,<br/>Goldman Sachs]
     llm[LLM<br/>hosted or Ollama<br/>phase 3]
     li[LinkedIn]
 
@@ -83,10 +83,11 @@ The backend is organised **by feature** rather than by layer (`company`, `job`, 
 | Avature | `GET {sub}.avature.net/{portal}/SearchJobs/` (HTML) | `{sub}.avature.net/{portal}` | Results pages; whole board, no dates |
 | Amazon | `GET amazon.jobs/en/search.json` | `amazon.jobs` | The JSON its own page loads; search, newest first |
 | Google | `GET google.com/about/careers/applications/jobs/results` (HTML with embedded JSON) | `google.com/about/careers` | Results pages; search, newest first |
+| Goldman Sachs | `POST api-higher.gs.com/gateway/api/v1/graphql` (`GetRoles`) | `higher.gs.com` | The GraphQL its own page calls; search, newest first |
 
 The first three are documented public APIs. The rest are read the way the companies' own careers pages load them: they work, but can change without notice, so a change shows up as "Last sync failed" with a plain message rather than a silently empty board. Sites that require a login, a token or a bot check to read jobs (Microsoft, Apple, Meta at the time of writing) are not read at all; the app never works around access controls. See [ADR 0004](adr/0004-unofficial-feeds.md).
 
-LinkedIn-only listings, and companies with no readable feed, will be added by pasting a job link (phase 2).
+Companies with no readable feed are covered two other ways: pasting a job link (phase 2), and importing the job-alert emails the owner subscribes to (phase 3, section 8).
 
 ### 5.2 One interface, one client per source
 
@@ -119,6 +120,7 @@ classDiagram
     JobSource <|.. AvatureJobSource
     JobSource <|.. AmazonJobSource
     JobSource <|.. GoogleJobSource
+    JobSource <|.. GoldmanJobSource
     JobSource ..> FetchQuery
     JobSource ..> FetchResult
     FetchResult o-- FetchedJob
@@ -130,7 +132,7 @@ Each client maps its feed into the same `FetchedJob` record, so nothing past the
 Normalisation rules worth knowing:
 - **Workplace** is one of `REMOTE`, `HYBRID`, `ONSITE`, `UNKNOWN`. Ashby's `workplaceType` wins over its `isRemote` flag, which is also `true` for hybrid roles. Greenhouse carries it in a "Workplace Type" custom field.
 - **Region** is `US`, `NON_US` or `UNKNOWN`, from structured country fields where a feed has them (Lever `country`, Ashby addresses, Amazon `country_code`, Google location codes) and otherwise from the location text (`Region.fromLocation`). The text rules are conservative: when unsure the answer is `UNKNOWN`, so a US role is never dropped by mistake.
-- **Posted date** is Greenhouse `first_published`, Lever `createdAt`, Ashby `publishedAt`, Amazon `posted_date`, Google's creation timestamp, and Workday's relative "Posted 3 Days Ago" (anything past "30+ Days" reads as 31 days). Avature has no dates.
+- **Posted date** is Greenhouse `first_published`, Lever `createdAt`, Ashby `publishedAt`, Amazon `posted_date`, Google's creation timestamp, Goldman's `createdDate`, and Workday's relative "Posted 3 Days Ago" (anything past "30+ Days" reads as 31 days). Avature has no dates.
 - **Description** is stored as plain text. Greenhouse sends HTML-escaped HTML, which is unescaped and stripped. Workday and Avature lists carry no descriptions; the detail pane links to the posting.
 
 ### 5.3 What gets kept
@@ -143,7 +145,7 @@ The same rules apply to every source (`IngestRules`), configured in `app.jobs`:
 | Maximum age | 30 days | roles not seen before; one already stored keeps refreshing |
 | Search phrases | none (every role) | per company, comma-separated; a role matches a phrase when its title and team contain every word of it |
 
-Search-based sources (Amazon, Google, Workday) also send the phrases and the US filter to the site, so they fetch only what is wanted. Amazon posts over 200 US roles a day, so phrases are what make it usable; the add-company form asks for them.
+Search-based sources (Amazon, Google, Goldman Sachs, Workday) also send the phrases and the US filter to the site, so they fetch only what is wanted. Amazon posts over 200 US roles a day, so phrases are what make it usable; the add-company form asks for them.
 
 ### 5.4 Paging and coverage
 
@@ -215,7 +217,7 @@ erDiagram
     COMPANY {
         bigint id PK
         text name
-        text ats "GREENHOUSE | LEVER | ASHBY | WORKDAY | AVATURE | AMAZON | GOOGLE"
+        text ats "GREENHOUSE | LEVER | ASHBY | WORKDAY | AVATURE | AMAZON | GOOGLE | GOLDMAN"
         text board
         text careers_url
         text search "comma-separated phrases"
@@ -292,23 +294,32 @@ stateDiagram-v2
 
 `follow_up_on` is set when a message is sent and cleared when a reply is logged. The board's "Due today" column is a query on that date, so no background job is needed. Reply rates are grouped by message style to show what works.
 
-## 8. AI (phase 3)
+## 8. Job-alert email import (phase 3)
+
+For companies whose careers sites can't be read (Microsoft, Apple, Meta), and for LinkedIn-only listings, the owner subscribes to job alerts on the company's site or on LinkedIn, and the app reads those emails from the owner's own Gmail.
+
+- **No noise.** A Gmail filter files alert emails under a `Job alerts` label, skips the inbox and marks them read, so they never trigger a notification. The app can create this filter when Gmail access is granted.
+- **Least access.** The Gmail API with the read-only scope, reading only that label, once a day with the sync. Free.
+- **One parser per sender** (LinkedIn, Microsoft careers, and so on), behind the same idea as `JobSource`: each maps an email into `FetchedJob` records, with the link to the posting. Alerts carry little detail, so the detail pane links out.
+- **Same rules.** US only, maximum age and search phrases apply as for any source; a role seen in two alerts is stored once.
+
+## 9. AI (phase 4)
 
 - **Filter before calling AI.** Keyword, location, workplace and seniority filters run in SQL first; only the shortlist (about 30 jobs a day) is scored.
 - **Match:** the model gets the resume and a job description and returns a score with reasons, stored with the job so it is paid for once.
 - **Drafting:** referral messages, follow-ups and cover letters are drafted from the resume, the role and a real connection point. The prompt forbids claiming experience that is not in the resume, and the owner edits before anything is used.
 - **Provider behind an interface:** a small hosted model (a few dollars a month) or a local model through Ollama ($0, resume stays on the machine). See [ADR 0003](adr/0003-ai-provider-abstraction.md).
 
-## 9. Browser extension (phase 4)
+## 10. Browser extension (phase 5)
 
 - **Save profile:** on a profile page the owner is viewing, one click sends name, title, company and URL to `POST /api/contacts`. It reads only the current page, only on click.
 - **Fill applications:** on Greenhouse, Lever, Ashby and Workday application pages it fills contact details, links, history, the resume upload and drafted answers from the answer bank. It never clicks submit, and it leaves attestation questions (work authorization, sponsorship, EEO, background checks) for the owner.
 
-## 10. Cross-cutting concerns
+## 11. Cross-cutting concerns
 
 | Concern | Approach |
 |---|---|
-| Security | One user on localhost. The API binds to `127.0.0.1` and has no login. The web app reaches it through the same origin (Vite proxy in development, nginx in Docker), so CORS is only a fallback. nginx sends a Content Security Policy and the usual hardening headers. Hosting it means adding auth first: see section 11. |
+| Security | One user on localhost. The API binds to `127.0.0.1` and has no login. The web app reaches it through the same origin (Vite proxy in development, nginx in Docker), so CORS is only a fallback. nginx sends a Content Security Policy and the usual hardening headers. Hosting it means adding auth first: see section 12. |
 | Personal data | The resume and answer bank live in `private/`, which git ignores. Nothing personal is committed. |
 | Errors | One `@RestControllerAdvice` returns RFC 7807 problem details. Sync failures are stored per company, not thrown at the scheduler. |
 | Politeness | A descriptive `User-Agent`, timeouts, a delay between pages, a page cap, and one sync a day. No source that needs a login, token or bot check is read. |
@@ -316,7 +327,7 @@ stateDiagram-v2
 | Observability | Actuator health with liveness and readiness probes; a log line per company per sync with counts. |
 | Cost | $0: public feeds, local Docker, free tiers only. |
 
-## 11. Deployment
+## 12. Deployment
 
 Today the app runs on one machine. It is built so that hosting it later is a contained change rather than a rewrite ([ADR 0005](adr/0005-deployable-by-design.md)):
 
@@ -333,13 +344,14 @@ Today the app runs on one machine. It is built so that hosting it later is a con
 3. **Secrets and personal data.** The database password and any AI key from a secret store; the resume in encrypted storage rather than `private/`.
 4. **Multi-user, if ever.** A `user_id` on companies and everything below them. Nothing in the domain model assumes a single user beyond the missing column.
 
-## 12. Roadmap
+## 13. Roadmap
 
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | Companies, link detection, Greenhouse/Lever/Ashby sync, jobs inbox with filters and "new" flag | Done |
-| 1.5 | Workday, Avature, Amazon and Google sources; US-only and age rules; search phrases; background sync with progress; redesigned UI | Done |
+| 1.5 | Workday, Avature, Amazon, Google and Goldman Sachs sources; US-only and age rules; search phrases; background sync with progress; redesigned UI | Done |
 | 2 | Contacts, outreach and application tracker, follow-up reminders, paste-a-job-link | Planned |
-| 3 | AI match scoring and message drafting | Planned |
-| 4 | Browser extension: save profile, fill applications | Planned |
-| 5 | Tailored resumes and cover letters, answer bank, reply-rate stats | Planned |
+| 3 | Job-alert email import from a silent Gmail label (Microsoft, Meta, Apple, LinkedIn-only roles) | Planned |
+| 4 | AI match scoring and message drafting | Planned |
+| 5 | Browser extension: save profile, fill applications | Planned |
+| 6 | Tailored resumes and cover letters, answer bank, reply-rate stats | Planned |
