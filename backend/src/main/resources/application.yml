@@ -56,3 +56,11 @@ app:
   tracker:
     # When to remind the owner to follow up on a message with no reply
     follow-up-after: ${FOLLOW_UP_AFTER:5d}
+  gmail:
+    # A Google OAuth client of type "Web application" (docs/gmail-setup.md). Empty turns the feature off.
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+    # Must match an authorised redirect URI on that client
+    redirect-uri: ${GMAIL_REDIRECT_URI:http://localhost:8081/api/gmail/callback}
+    # The Gmail label job-alert emails are filed under
+    label: ${GMAIL_LABEL:Job alerts}

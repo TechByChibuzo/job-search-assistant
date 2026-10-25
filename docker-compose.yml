@@ -26,6 +26,10 @@ services:
       # the port mapping below still keeps it off the network
       SERVER_ADDRESS: 0.0.0.0
       TZ: ${TZ:-America/Chicago}
+      # Job-alert emails from Gmail (optional; see docs/gmail-setup.md). Values come from .env
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GMAIL_LABEL: ${GMAIL_LABEL:-Job alerts}
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:

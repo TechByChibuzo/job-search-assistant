@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("app")
-public record AppProperties(Cors cors, Http http, Sync sync, Jobs jobs, Tracker tracker) {
+public record AppProperties(Cors cors, Http http, Sync sync, Jobs jobs, Tracker tracker, Gmail gmail) {
 
     public record Cors(List<String> allowedOrigins) {}
 
@@ -25,4 +25,12 @@ public record AppProperties(Cors cors, Http http, Sync sync, Jobs jobs, Tracker 
 
     /** @param followUpAfter how long after a message with no reply to suggest following up */
     public record Tracker(Duration followUpAfter) {}
+
+    /** Reading job-alert emails from the owner's Gmail, read-only. Off until a client id is set. */
+    public record Gmail(String clientId, String clientSecret, String redirectUri, String label) {
+
+        public boolean configured() {
+            return clientId != null && !clientId.isBlank() && clientSecret != null && !clientSecret.isBlank();
+        }
+    }
 }

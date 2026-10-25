@@ -16,7 +16,7 @@ public record SyncResult(
         int skippedJobs,
         String error) {
 
-    static SyncResult failed(Long companyId, String companyName, SyncStatus status, String error) {
+    public static SyncResult failed(Long companyId, String companyName, SyncStatus status, String error) {
         return new SyncResult(companyId, companyName, status, 0, 0, 0, 0, error);
     }
 }

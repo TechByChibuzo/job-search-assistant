@@ -63,6 +63,22 @@ public class ManualJobService {
         return new AddedJob(job, false, board);
     }
 
+    /**
+     * Saves a role found in a job-alert email, unless one with that link is already saved. The email's date
+     * stands in for the posting date. Returns empty when it was already saved.
+     */
+    @Transactional
+    public Optional<Job> addFromAlert(String url, String title, String companyName, String location, Instant receivedAt) {
+        String link = checkLink(url);
+        if (jobs.findFirstByUrl(link).isPresent()) {
+            return Optional.empty();
+        }
+        Company company = companies.findOrCreateManual(companyName);
+        FetchedJob fetched = new FetchedJob("alert:" + link, title, null, location, Workplace.UNKNOWN.orFromLocation(location),
+                Region.fromLocation(location), receivedAt, link, null);
+        return Optional.of(jobs.save(Job.manual(company, fetched, clock.instant())));
+    }
+
     @Transactional
     public Job setClosed(long jobId, boolean closed) {
         Job job = jobs.findWithCompanyById(jobId).orElseThrow(() -> new NotFoundException("No job with id " + jobId));

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 import com.jobsearch.common.ConflictException;
 import com.jobsearch.company.Company;
+import com.jobsearch.company.SyncStatus;
 
 /**
  * Runs syncs in the background. A full sync pages through search feeds politely and can take minutes, which
@@ -30,6 +31,7 @@ public class SyncRunner {
     private static final Logger log = LoggerFactory.getLogger(SyncRunner.class);
 
     private final JobSyncService sync;
+    private final List<ExtraFeed> extraFeeds;
     private final Clock clock;
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "job-sync");
@@ -39,8 +41,9 @@ public class SyncRunner {
 
     private volatile SyncProgress state = SyncProgress.idle();
 
-    SyncRunner(JobSyncService sync, Clock clock) {
+    SyncRunner(JobSyncService sync, List<ExtraFeed> extraFeeds, Clock clock) {
         this.sync = sync;
+        this.extraFeeds = extraFeeds;
         this.clock = clock;
     }
 
@@ -58,13 +61,32 @@ public class SyncRunner {
         executor.submit(() -> {
             try {
                 if (companyId == null) {
-                    sync.syncAll(tracker);
+                    runAll(tracker);
                 } else {
                     sync.sync(companyId, tracker);
                 }
                 update(s -> s.finish(clock.instant(), null));
             } catch (RuntimeException e) {
                 log.warn("Sync run failed", e);
+                update(s -> s.finish(clock.instant(), e.getMessage()));
+            }
+        });
+        return state;
+    }
+
+    /** Runs one extra feed on its own, such as reading job-alert emails now. */
+    public synchronized SyncProgress startFeed(String name) {
+        ExtraFeed feed = extraFeeds.stream().filter(f -> f.name().equals(name)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No feed named " + name));
+        if (state.running()) {
+            throw new ConflictException("A sync is already running.");
+        }
+        state = SyncProgress.started(clock.instant());
+        executor.submit(() -> {
+            try {
+                runFeed(feed);
+                update(s -> s.finish(clock.instant(), null));
+            } catch (RuntimeException e) {
                 update(s -> s.finish(clock.instant(), e.getMessage()));
             }
         });
@@ -80,11 +102,34 @@ public class SyncRunner {
             state = SyncProgress.started(clock.instant());
         }
         try {
-            sync.syncAll(new Tracker());
+            runAll(new Tracker());
             update(s -> s.finish(clock.instant(), null));
         } catch (RuntimeException e) {
             update(s -> s.finish(clock.instant(), e.getMessage()));
         }
+    }
+
+    /** Every company, then every extra feed that is set up, each reported as it finishes. */
+    private void runAll(Tracker tracker) {
+        sync.syncAll(tracker);
+        for (ExtraFeed feed : extraFeeds) {
+            if (feed.enabled()) {
+                runFeed(feed);
+            }
+        }
+    }
+
+    private void runFeed(ExtraFeed feed) {
+        update(s -> s.at(feed.name(), s.done(), s.total() + 1));
+        SyncResult result;
+        try {
+            result = feed.run();
+        } catch (RuntimeException e) {
+            log.warn("{} failed", feed.name(), e);
+            result = SyncResult.failed(null, feed.name(), SyncStatus.FAILED, e.getMessage());
+        }
+        SyncResult done = result;
+        update(s -> s.with(done));
     }
 
     private synchronized void update(UnaryOperator<SyncProgress> change) {
