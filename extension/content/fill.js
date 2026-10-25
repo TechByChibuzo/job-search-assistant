@@ -145,10 +145,27 @@
     for (const type of ['input', 'change', 'blur']) el.dispatchEvent(new Event(type, { bubbles: true }))
   }
 
+  /**
+   * Whether the owner can actually see a field. A hostile page could hide fields (transparent, tiny,
+   * off-screen, or inside a hidden box) to collect details the owner never sees being typed, so only
+   * fields with a real size, inside the page, with nothing transparent or hidden around them are filled.
+   */
   function visible(el) {
     if (el.disabled || el.readOnly || el.type === 'hidden') return false
-    const style = el.ownerDocument.defaultView.getComputedStyle(el)
-    return style.display !== 'none' && style.visibility !== 'hidden'
+    if (typeof el.checkVisibility === 'function' && !el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) {
+      return false
+    }
+    const view = el.ownerDocument.defaultView
+    for (let node = el; node && node.nodeType === 1; node = node.parentElement) {
+      const style = view.getComputedStyle(node)
+      if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity) === 0) return false
+    }
+    const rect = el.getBoundingClientRect()
+    const page = el.ownerDocument.documentElement
+    const pageWidth = Math.max(page.scrollWidth, view.innerWidth)
+    const pageHeight = Math.max(page.scrollHeight, view.innerHeight)
+    const onPage = rect.right + view.scrollX > 0 && rect.bottom + view.scrollY > 0 && rect.left + view.scrollX < pageWidth && rect.top + view.scrollY < pageHeight
+    return rect.width >= 4 && rect.height >= 4 && onPage
   }
 
   function mark(el, colour) {
@@ -164,7 +181,8 @@
       described.find(({ d }) => /resume|\bcv\b|curriculum/i.test(d) && !/cover/i.test(d)) ||
       (described.length === 1 && !/cover/i.test(described[0].d) ? described[0] : null)
     if (!target) return 'not-found'
-    if (!resume || typeof DataTransfer === 'undefined') return 'unsupported'
+    if (!resume) return 'not-attached'
+    if (typeof DataTransfer === 'undefined') return 'unsupported'
     if (target.el.files && target.el.files.length) return 'already-attached'
     const bytes = Uint8Array.from(atob(resume.base64), (c) => c.charCodeAt(0))
     const transfer = new DataTransfer()
@@ -178,7 +196,7 @@
 
   /**
    * @param profile the owner's profile fields
-   * @param resume  { base64, fileName, type } or null
+   * @param resume  { base64, fileName, type }, or null to leave the upload to the owner
    * @returns what was filled, what was left for the owner, and whether the resume was attached
    */
   function fill(doc, profile, resume) {

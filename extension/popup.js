@@ -152,11 +152,16 @@ async function fillView(tab) {
     return
   }
 
+  // On a hiring system the app knows, attach the resume; anywhere else, only if the owner ticks the box,
+  // so an unfamiliar page can't collect the resume through a hidden upload
+  const attach = h('input', { type: 'checkbox', checked: Boolean(system) })
+  const attachLabel = h('label', { class: 'checkbox' }, attach, ` Attach my resume (${profile.resumeFileName ?? 'none in the app'})`)
+
   fillButton.addEventListener('click', async () => {
     fillButton.disabled = true
     fillButton.textContent = 'Filling…'
     try {
-      const resume = await resumeFile()
+      const resume = attach.checked ? await resumeFile() : null
       const report = await inPage(tab.id, 'content/fill.js', (p, r) => globalThis.JSA_FILL.fill(document, p, r), [profile.fields, resume])
       result.replaceChildren(...reportView(report, profile.resumeFileName), recordForm(tab, report, profile.resumeFileName))
       fillButton.textContent = 'Fill again'
@@ -173,8 +178,10 @@ async function fillView(tab) {
       'p',
       { class: 'muted' },
       system ? `${system} form. ` : '',
-      'Fills your details and attaches your resume. Questions about work authorization, sponsorship, EEO or consent are left for you.',
+      'Fills your details into the fields you can see. Questions about work authorization, sponsorship, EEO or consent are left for you.',
     ),
+    system ? null : h('p', { class: 'faint' }, `${new URL(tab.url).hostname} isn’t a hiring system the app knows; check it’s the real employer before attaching your resume.`),
+    attachLabel,
     fillButton,
     result,
   )
@@ -187,6 +194,7 @@ function reportView(report, resumeFileName) {
     'not-found': 'Couldn’t tell which upload is the resume; attach it yourself.',
     'no-upload-field': 'No resume upload on this page.',
     unsupported: 'Attach your resume yourself.',
+    'not-attached': 'Resume not attached (you left it unticked).',
   }[report.resume]
   const nodes = [
     note(

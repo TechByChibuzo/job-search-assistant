@@ -188,3 +188,15 @@ li {
 .mark {
   background-image: linear-gradient(transparent 55%, var(--highlight) 55%, var(--highlight) 92%, transparent 92%);
 }
+
+label.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+label.checkbox input {
+  width: auto;
+  margin: 0;
+}

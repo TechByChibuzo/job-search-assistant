@@ -11,3 +11,9 @@ export function loadContentScript(name) {
   const code = readFileSync(join(process.cwd(), 'content', name), 'utf8')
   new Function(code)()
 }
+
+// jsdom does no layout: give every element a plausible box, unless a test sets data-rect="x,y,w,h"
+Element.prototype.getBoundingClientRect = function () {
+  const [x, y, w, h] = (this.getAttribute('data-rect') || '10,10,200,24').split(',').map(Number)
+  return { x, y, left: x, top: y, width: w, height: h, right: x + w, bottom: y + h }
+}

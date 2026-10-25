@@ -141,6 +141,28 @@ describe('what it never does', () => {
     expect(report.needsYou).toEqual(['Pronouns'])
   })
 
+  it('never fills fields the owner cannot see', () => {
+    const report = form(`
+      <label for="email">Email</label><input id="email">
+      <label for="e2">Email</label><input id="e2" style="opacity: 0">
+      <div style="opacity: 0"><label for="e3">Phone</label><input id="e3"></div>
+      <label for="e4">Phone</label><input id="e4" data-rect="10,10,1,1">
+      <label for="e5">Phone</label><input id="e5" data-rect="-5000,10,200,24">
+      <div style="visibility: hidden"><label for="e6">LinkedIn</label><input id="e6"></div>`)
+
+    expect(document.getElementById('email').value).toBe('jane@example.com')
+    for (const id of ['e2', 'e3', 'e4', 'e5', 'e6']) expect(document.getElementById(id).value).toBe('')
+    expect(report.filled).toEqual(['Email'])
+  })
+
+  it('leaves the resume to the owner when told not to attach it', () => {
+    document.body.innerHTML = '<label for="r">Resume</label><input id="r" type="file">'
+
+    const report = globalThis.JSA_FILL.fill(document, profile, null)
+
+    expect(report.resume).toBe('not-attached')
+  })
+
   it('does not mistake a cover letter upload for the resume', () => {
     const report = form('<label for="cl">Cover letter</label><input id="cl" type="file">')
 
