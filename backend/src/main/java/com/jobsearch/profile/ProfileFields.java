@@ -21,13 +21,15 @@ public record ProfileFields(
         @Size(max = 200) String currentTitle,
         @Size(max = 200) String school,
         @Size(max = 200) String degree,
-        @Size(max = 10) String graduationYear) {
+        @Size(max = 10) String graduationYear,
+        @Size(max = 200) String previousSchool,
+        @Size(max = 200) String previousDegree) {
 
     /** Blank fields become null, and links must be web links: they end up as anchors and in forms. */
     ProfileFields cleaned() {
         return new ProfileFields(c(firstName), c(lastName), c(email), c(phone), c(city), c(state), c(country),
                 link(linkedinUrl), link(githubUrl), link(websiteUrl), c(currentCompany), c(currentTitle), c(school), c(degree),
-                c(graduationYear));
+                c(graduationYear), c(previousSchool), c(previousDegree));
     }
 
     private static String c(String s) {

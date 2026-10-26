@@ -140,6 +140,179 @@
     }
   }
 
+  const US_STATES = {
+    AL: 'alabama', AK: 'alaska', AZ: 'arizona', AR: 'arkansas', CA: 'california', CO: 'colorado', CT: 'connecticut',
+    DE: 'delaware', FL: 'florida', GA: 'georgia', HI: 'hawaii', ID: 'idaho', IL: 'illinois', IN: 'indiana', IA: 'iowa',
+    KS: 'kansas', KY: 'kentucky', LA: 'louisiana', ME: 'maine', MD: 'maryland', MA: 'massachusetts', MI: 'michigan',
+    MN: 'minnesota', MS: 'mississippi', MO: 'missouri', MT: 'montana', NE: 'nebraska', NV: 'nevada', NH: 'new hampshire',
+    NJ: 'new jersey', NM: 'new mexico', NY: 'new york', NC: 'north carolina', ND: 'north dakota', OH: 'ohio',
+    OK: 'oklahoma', OR: 'oregon', PA: 'pennsylvania', RI: 'rhode island', SC: 'south carolina', SD: 'south dakota',
+    TN: 'tennessee', TX: 'texas', UT: 'utah', VT: 'vermont', VA: 'virginia', WA: 'washington', WV: 'west virginia',
+    WI: 'wisconsin', WY: 'wyoming', DC: 'district of columbia',
+  }
+
+  function norm(s) {
+    return String(s ?? '').toLowerCase().replace(/[^a-z0-9&]+/g, ' ').trim()
+  }
+
+  /** "TX" or "Texas" → "texas"; anything else as it is. */
+  function stateName(state) {
+    const s = String(state ?? '').trim()
+    return US_STATES[s.toUpperCase()] ?? norm(s)
+  }
+
+  function isCombobox(el) {
+    return el.getAttribute('role') === 'combobox' || el.getAttribute('aria-autocomplete') === 'list'
+  }
+
+  /** The visible box around a type-to-search input, which itself can be a couple of pixels wide until typed in. */
+  function comboboxControl(el) {
+    return el.closest('[class*="control"], [class*="select"]:not(input)') ?? el.parentElement
+  }
+
+  /** Whether the list already has a choice (made by the owner, or by the site): never replaced. */
+  function hasChoice(el) {
+    const control = comboboxControl(el)
+    return Boolean(control?.querySelector('[class*="single-value"], [class*="multi-value"]')) || Boolean(el.value)
+  }
+
+  /**
+   * What to search for in a pick-list, and how to recognise the right suggestion, from the profile. Only plain
+   * facts are picked: country, city, school and degree. The nth school or degree list on a form gets the nth of
+   * the profile's (most recent first).
+   */
+  function pickFor(key, p, seen) {
+    const nth = (k) => (seen[k] = (seen[k] ?? -1) + 1)
+    switch (key) {
+      case 'country': {
+        // An empty country with a US state means the United States
+        const inUs = Object.hasOwn(US_STATES, String(p.state ?? '').trim().toUpperCase()) || Object.values(US_STATES).includes(norm(p.state))
+        const country = p.country || (inUs ? 'United States' : '')
+        // Phone country lists read "United States +1"; others say "United States of America" or "USA"
+        const names = new Set([norm(country)])
+        if (['united states', 'united states of america', 'usa', 'us'].includes(norm(country))) {
+          ;['united states', 'united states of america', 'usa', 'us'].forEach((n) => names.add(n))
+        }
+        return country && { query: country, score: (t) => (names.has(t.replace(/\s*\d+$/, '')) ? 2 : 0) }
+      }
+      case 'city':
+      case 'location': {
+        if (!p.city) return null
+        const state = stateName(p.state)
+        return { query: p.city, score: (t) => (t.startsWith(norm(p.city)) && (!state || t.includes(state)) ? 2 : 0) }
+      }
+      case 'school': {
+        const school = [p.school, p.previousSchool][nth('school')]
+        if (!school) return null
+        // Lists name campuses ("Texas A&M University - College Station"): the profile's school must name the
+        // same words to be chosen; a bare "Texas A&M University" matches several campuses and is left alone
+        const words = new Set(norm(school).split(' '))
+        const name = school.replace(/\s*[-–(,].*$/, '').trim()
+        const base = norm(name)
+        return {
+          query: name,
+          ambiguous: 'Several campuses match: choose yours, or add the campus to the school in your Profile',
+          score: (t) => {
+            const option = t.split(' ')
+            if (option.length === words.size && option.every((w) => words.has(w))) return 2
+            return t.startsWith(`${base} `) || t === base ? 1 : 0
+          },
+        }
+      }
+      case 'degree': {
+        const degree = [p.degree, p.previousDegree][nth('degree')]
+        const level = /master|m\.?s\b|mba/i.test(degree ?? '')
+          ? 'master'
+          : /bachelor|b\.?s\b|b\.?a\b/i.test(degree ?? '')
+            ? 'bachelor'
+            : /ph\.?d|doctor/i.test(degree ?? '')
+              ? 'doctor'
+              : /associate/i.test(degree ?? '')
+                ? 'associate'
+                : null
+        // The plain "Master's Degree" beats a named one ("Master of Business Administration")
+        return level && { query: level, score: (t) => (t === `${level} s degree` || t === `${level} degree` ? 2 : t.startsWith(level) ? 1 : 0) }
+      }
+      default:
+        return null
+    }
+  }
+
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  function setRaw(el, text) {
+    const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value')?.set
+    if (setter) setter.call(el, text)
+    else el.value = text
+  }
+
+  /**
+   * Types into a search field one key at a time, with the events real typing fires, without leaving it:
+   * Greenhouse's lists only open their suggestions for keystrokes, not for a value set in one go.
+   */
+  async function typeKeys(el, text) {
+    let typed = ''
+    for (const ch of text) {
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: ch, bubbles: true, cancelable: true }))
+      typed += ch
+      setRaw(el, typed)
+      el.dispatchEvent(new InputEvent('input', { inputType: 'insertText', data: ch, bubbles: true }))
+      el.dispatchEvent(new KeyboardEvent('keyup', { key: ch, bubbles: true }))
+      await sleep(25)
+    }
+  }
+
+  /** Empties the search and closes the list, which clearing itself can open, so it closes after a moment. */
+  async function clearSearch(el) {
+    setRaw(el, '')
+    el.dispatchEvent(new InputEvent('input', { inputType: 'deleteContentBackward', bubbles: true }))
+    await sleep(60)
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    el.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+    el.blur()
+  }
+
+  /**
+   * The field's own suggestions: from the list it points to, or else the menu drawn inside its own container.
+   * Never another list on the page (a phone number's country codes).
+   */
+  function optionsOf(doc, el) {
+    const id = el.getAttribute('aria-controls')
+    const listbox = id && doc.getElementById(id)
+    if (listbox) return [...listbox.querySelectorAll('[role="option"]')]
+    const container = comboboxControl(el)?.parentElement
+    return container ? [...container.querySelectorAll('[role="option"], [class*="__option"]')] : []
+  }
+
+  /**
+   * Searches a pick-list and chooses the one best suggestion, waiting for suggestions that load from the network.
+   * Chooses nothing, and clears the search, when no suggestion matches or two match equally well.
+   * @returns true when chosen, or why not ('no-match' or the ambiguity message)
+   */
+  async function pick(doc, el, { query, score, ambiguous }, waitMs) {
+    el.focus()
+    el.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    await typeKeys(el, query)
+    let ranked = []
+    for (let waited = 0; waited < waitMs; waited += 150) {
+      await sleep(150)
+      ranked = optionsOf(doc, el)
+        .map((o) => ({ o, s: score(norm(o.textContent)) }))
+        .filter(({ s }) => s > 0)
+        .sort((a, b) => b.s - a.s)
+      if (ranked[0]?.s === 2) break
+    }
+    const best = ranked[0]
+    if (!best || (ranked[1] && ranked[1].s === best.s)) {
+      await clearSearch(el)
+      return best ? ambiguous || 'Several suggestions match: choose yours' : 'no-match'
+    }
+    best.o.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    best.o.click()
+    await sleep(150)
+    return true
+  }
+
   /** Sets a value so React and other frameworks notice: the native setter, then the events a user's typing fires. */
   function setValue(el, value) {
     const proto = Object.getPrototypeOf(el)
@@ -216,15 +389,17 @@
    * @returns what was filled, which saved answers were used, what was left for the owner, and whether the
    *          resume was attached
    */
-  function fill(doc, profile, resume, answers = {}) {
+  /** @param options.waitMs how long to wait for a pick-list's suggestions to load */
+  async function fill(doc, profile, resume, answers = {}, { waitMs = 5000 } = {}) {
     const filled = []
     const answered = []
     const needsYou = []
     const toChoose = []
     const seenQuestions = new Set()
+    const picked = {}
 
     for (const el of doc.querySelectorAll('input, textarea, select')) {
-      if (!visible(el)) continue
+      if (!(isCombobox(el) ? visible(comboboxControl(el)) && !el.disabled : visible(el))) continue
       const type = (el.getAttribute('type') || '').toLowerCase()
       const description = describe(doc, el)
       const label = labelText(doc, el) || el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.name || ''
@@ -238,10 +413,19 @@
         mark(el, '#d97706')
         continue
       }
-      // A search-and-pick list (country, city, school) only takes a choice from its own list: typing into it
-      // selects nothing, so it's left for the owner and named
-      if (el.getAttribute('role') === 'combobox' || el.getAttribute('aria-autocomplete') === 'list') {
-        if (!el.value && label && !toChoose.includes(label)) toChoose.push(label)
+      // A search-and-pick list only takes a choice from its own suggestions: for a plain fact (country, city,
+      // school, degree) the matching suggestion is chosen; anything else, or no match, is left for the owner
+      if (isCombobox(el)) {
+        if (hasChoice(el)) continue
+        const want = pickFor(keyFor(el, description), profile, picked)
+        const outcome = want ? await pick(doc, el, want, waitMs) : 'no-match'
+        if (outcome === true) {
+          // The list's own styling covers an outline on the field, so the box around it carries the mark
+          mark(comboboxControl(el)?.parentElement ?? el, '#18794e')
+          filled.push(label)
+        } else if (label && !toChoose.includes(label) && !toChoose.includes(`${label}: ${outcome}`)) {
+          toChoose.push(outcome === 'no-match' ? label : `${label}: ${outcome}`)
+        }
         continue
       }
       // A long answer is filled only from the answer bank, outlined in blue for the owner to read

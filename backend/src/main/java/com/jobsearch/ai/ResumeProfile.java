@@ -26,7 +26,9 @@ public class ResumeProfile {
             String currentTitle,
             String school,
             String degree,
-            String graduationYear) {}
+            String graduationYear,
+            String previousSchool,
+            String previousDegree) {}
 
     static final String PROMPT = """
             Read the candidate's resume and copy out their contact details and education, for filling job \
@@ -35,6 +37,7 @@ public class ResumeProfile {
 
             - currentCompany and currentTitle: the most recent role (the one marked present, or the latest).
             - school, degree, graduationYear: the highest or most recent degree, including one in progress.
+            - previousSchool, previousDegree: the degree before that one, if the resume lists one.
             - Links: full URLs as written (add https:// if the resume omits it).
             """;
 
@@ -44,7 +47,7 @@ public class ResumeProfile {
         var string = Map.<String, Object>of("type", "string");
         var props = new LinkedHashMap<String, Object>();
         for (String f : new String[] {"firstName", "lastName", "email", "phone", "city", "state", "country", "linkedinUrl",
-                "githubUrl", "websiteUrl", "currentCompany", "currentTitle", "school", "degree", "graduationYear"}) {
+                "githubUrl", "websiteUrl", "currentCompany", "currentTitle", "school", "degree", "graduationYear", "previousSchool", "previousDegree"}) {
             props.put(f, string);
         }
         SCHEMA = AnthropicClaude.object(props);
@@ -63,7 +66,8 @@ public class ResumeProfile {
         JsonNode a = claude.ask(PROMPT, resume, "Copy out the candidate's details.", SCHEMA, Claude.Effort.LOW);
         return new Extracted(t(a, "firstName"), t(a, "lastName"), t(a, "email"), t(a, "phone"), t(a, "city"), t(a, "state"),
                 t(a, "country"), t(a, "linkedinUrl"), t(a, "githubUrl"), t(a, "websiteUrl"), t(a, "currentCompany"),
-                t(a, "currentTitle"), t(a, "school"), t(a, "degree"), t(a, "graduationYear"));
+                t(a, "currentTitle"), t(a, "school"), t(a, "degree"), t(a, "graduationYear"),
+                t(a, "previousSchool"), t(a, "previousDegree"));
     }
 
     private static String t(JsonNode a, String field) {

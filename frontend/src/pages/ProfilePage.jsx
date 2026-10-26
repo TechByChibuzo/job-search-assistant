@@ -35,6 +35,8 @@ const SECTIONS = [
       ['school', 'School'],
       ['degree', 'Degree'],
       ['graduationYear', 'Graduation year'],
+      ['previousSchool', 'Earlier school'],
+      ['previousDegree', 'Earlier degree'],
     ],
   },
 ]

@@ -18,7 +18,7 @@ const profile = {
 }
 
 describe('a real Lever application form', () => {
-  it('fills every contact field, attaches the resume, and leaves each personal question for the owner', () => {
+  it('fills every contact field, attaches the resume, and leaves each personal question for the owner', async () => {
     document.documentElement.innerHTML = readFileSync(join(process.cwd(), 'test/fixtures/lever-apply.html'), 'utf8')
     globalThis.DataTransfer = class {
       constructor() {
@@ -37,7 +37,7 @@ describe('a real Lever application form', () => {
       })
     }
 
-    const report = globalThis.JSA_FILL.fill(document, profile, { base64: btoa('%PDF'), fileName: 'r.pdf', type: 'application/pdf' })
+    const report = await globalThis.JSA_FILL.fill(document, profile, { base64: btoa('%PDF'), fileName: 'r.pdf', type: 'application/pdf' })
 
     const value = (name) => document.querySelector(`[name="${name}"]`).value
     expect(value('name')).toBe('Jane Doe')

@@ -47,8 +47,8 @@ function form(html) {
 }
 
 describe('filling a Greenhouse-style form', () => {
-  it('fills contact fields and links, attaches the resume, and leaves sensitive questions alone', () => {
-    const report = form(`
+  it('fills contact fields and links, attaches the resume, and leaves sensitive questions alone', async () => {
+    const report = await form(`
       <label for="first_name">First Name *</label><input id="first_name" name="first_name">
       <label for="last_name">Last Name *</label><input id="last_name" name="last_name">
       <label for="email">Email *</label><input id="email" type="text" name="email">
@@ -77,7 +77,7 @@ describe('filling a Greenhouse-style form', () => {
 })
 
 describe('filling a Lever-style form', () => {
-  it('uses the full name and the company and link fields', () => {
+  it('uses the full name and the company and link fields', async () => {
     form(`
       <label>Full name<input name="name"></label>
       <label>Current company<input name="org"></label>
@@ -91,7 +91,7 @@ describe('filling a Lever-style form', () => {
 })
 
 describe('filling a Workday-style form', () => {
-  it('reads questions from data-automation-id and fires the events frameworks listen for', () => {
+  it('reads questions from data-automation-id and fires the events frameworks listen for', async () => {
     document.body.innerHTML = `
       <div data-automation-id="formField-legalNameSection_firstName">
         <label data-automation-id="formLabel">Given Name(s)</label>
@@ -104,7 +104,7 @@ describe('filling a Workday-style form', () => {
     const events = []
     document.querySelector('[data-automation-id=legalNameSection_firstName]').addEventListener('input', () => events.push('input'))
 
-    const report = globalThis.JSA_FILL.fill(document, profile, null)
+    const report = await globalThis.JSA_FILL.fill(document, profile, null)
 
     expect(document.querySelector('[data-automation-id=legalNameSection_firstName]').value).toBe('Jane')
     expect(document.querySelector('[data-automation-id=addressSection_city]').value).toBe('Austin')
@@ -114,8 +114,8 @@ describe('filling a Workday-style form', () => {
 })
 
 describe('what it never does', () => {
-  it('never overwrites an answer, never fills choices, and never touches EEO questions', () => {
-    const report = form(`
+  it('never overwrites an answer, never fills choices, and never touches EEO questions', async () => {
+    const report = await form(`
       <label for="email">Email</label><input id="email" value="mine@example.com">
       <label for="race">Race / Ethnicity</label><input id="race">
       <label for="vet">Veteran status</label><select id="vet"><option>Prefer not to say</option></select>
@@ -128,8 +128,8 @@ describe('what it never does', () => {
     expect(report.needsYou).toEqual(['Race / Ethnicity', 'Veteran status', 'I consent to the privacy policy'])
   })
 
-  it('lists a choice question once, by its question, even when its options look harmless', () => {
-    const report = form(`
+  it('lists a choice question once, by its question, even when its options look harmless', async () => {
+    const report = await form(`
       <ul><li class="application-question">
         <div class="application-label multiple-select">Pronouns</div>
         <div class="application-field"><ul>
@@ -141,8 +141,8 @@ describe('what it never does', () => {
     expect(report.needsYou).toEqual(['Pronouns'])
   })
 
-  it('never fills fields the owner cannot see', () => {
-    const report = form(`
+  it('never fills fields the owner cannot see', async () => {
+    const report = await form(`
       <label for="email">Email</label><input id="email">
       <label for="e2">Email</label><input id="e2" style="opacity: 0">
       <div style="opacity: 0"><label for="e3">Phone</label><input id="e3"></div>
@@ -155,16 +155,16 @@ describe('what it never does', () => {
     expect(report.filled).toEqual(['Email'])
   })
 
-  it('leaves the resume to the owner when told not to attach it', () => {
+  it('leaves the resume to the owner when told not to attach it', async () => {
     document.body.innerHTML = '<label for="r">Resume</label><input id="r" type="file">'
 
-    const report = globalThis.JSA_FILL.fill(document, profile, null)
+    const report = await globalThis.JSA_FILL.fill(document, profile, null)
 
     expect(report.resume).toBe('not-attached')
   })
 
-  it('does not mistake a cover letter upload for the resume', () => {
-    const report = form('<label for="cl">Cover letter</label><input id="cl" type="file">')
+  it('does not mistake a cover letter upload for the resume', async () => {
+    const report = await form('<label for="cl">Cover letter</label><input id="cl" type="file">')
 
     expect(report.resume).toBe('not-found')
     expect(document.getElementById('cl').files).toHaveLength(0)
@@ -172,7 +172,7 @@ describe('what it never does', () => {
 })
 
 describe('answers from the bank', () => {
-  it('lists the long-answer questions it may fill, and leaves sensitive ones out', () => {
+  it('lists the long-answer questions it may fill, and leaves sensitive ones out', async () => {
     form(`
       <label for="why">Why do you want to work here?</label><textarea id="why"></textarea>
       <label for="auth">Describe your work authorization status</label><textarea id="auth"></textarea>
@@ -180,7 +180,7 @@ describe('answers from the bank', () => {
     expect(globalThis.JSA_FILL.questions(document)).toEqual(['Why do you want to work here?'])
   })
 
-  it('fills a matched answer, outlined in blue, and never one into a sensitive or written box', () => {
+  it('fills a matched answer, outlined in blue, and never one into a sensitive or written box', async () => {
     form(`
       <label for="why">Why do you want to work here?</label><textarea id="why"></textarea>
       <label for="auth">Describe your work authorization status</label><textarea id="auth"></textarea>
@@ -189,7 +189,7 @@ describe('answers from the bank', () => {
       'Why do you want to work here?': { answerId: 4, answer: 'I like the product.' },
       'Describe your work authorization status': { answerId: 5, answer: 'Should never be typed' },
     }
-    const report = globalThis.JSA_FILL.fill(document, profile, null, answers)
+    const report = await globalThis.JSA_FILL.fill(document, profile, null, answers)
 
     expect(document.getElementById('why').value).toBe('I like the product.')
     expect(document.getElementById('why').style.outline).toContain('solid')
@@ -201,14 +201,14 @@ describe('answers from the bank', () => {
 })
 
 describe('putting a drafted answer in the form', () => {
-  it('types it into the matching empty box, outlined in blue', () => {
+  it('types it into the matching empty box, outlined in blue', async () => {
     form(`<label for="why">Why are you interested in Bridge?</label><textarea id="why"></textarea>`)
     expect(globalThis.JSA_FILL.insertAnswer(document, 'Why are you interested in Bridge?', 'Stablecoin rails.')).toBe('inserted')
     expect(document.getElementById('why').value).toBe('Stablecoin rails.')
     expect(document.getElementById('why').style.outline).toContain('solid')
   })
 
-  it('never overwrites what the owner wrote, and never answers a sensitive question', () => {
+  it('never overwrites what the owner wrote, and never answers a sensitive question', async () => {
     form(`
       <label for="why">Why us?</label><textarea id="why">My own words</textarea>
       <label for="auth">Describe your visa sponsorship needs</label><textarea id="auth"></textarea>`)
@@ -217,5 +217,97 @@ describe('putting a drafted answer in the form', () => {
     expect(globalThis.JSA_FILL.insertAnswer(document, 'Describe your visa sponsorship needs', 'Draft')).toBe('not-found')
     expect(document.getElementById('auth').value).toBe('')
     expect(globalThis.JSA_FILL.insertAnswer(document, 'A question not on the page', 'Draft')).toBe('not-found')
+  })
+})
+
+/**
+ * A search-and-pick list in the style of react-select (Greenhouse's): typing shows suggestions after a moment,
+ * as if loaded from the network, and clicking one shows it as the choice.
+ */
+function pickList(id, label, suggestions) {
+  const box = document.createElement('div')
+  box.innerHTML = `
+    <label id="${id}-label" for="${id}">${label}</label>
+    <div class="select__control">
+      <div class="select__value-container"></div>
+      <input id="${id}" role="combobox" aria-autocomplete="list" aria-labelledby="${id}-label" aria-controls="${id}-listbox">
+    </div>
+    <div id="${id}-listbox" role="listbox"></div>`
+  document.body.append(box)
+  const input = box.querySelector('input')
+  input.addEventListener('input', () => {
+    setTimeout(() => {
+      const list = box.querySelector('[role=listbox]')
+      list.innerHTML = ''
+      for (const s of suggestions(input.value)) {
+        const option = document.createElement('div')
+        option.setAttribute('role', 'option')
+        option.textContent = s
+        option.addEventListener('click', () => {
+          box.querySelector('.select__value-container').innerHTML = `<div class="select__single-value">${s}</div>`
+          list.innerHTML = ''
+          input.value = ''
+        })
+        list.append(option)
+      }
+    }, 60)
+  })
+  return box
+}
+
+const chosen = (id) => document.getElementById(id).closest('.select__control').querySelector('.select__single-value')?.textContent
+
+describe('search-and-pick lists', () => {
+  const education = { ...profile, city: 'Austin', state: 'Texas', school: 'Texas A&M University - College Station',
+    degree: 'Master of Computer Science', previousSchool: 'Purdue University (West Lafayette)',
+    previousDegree: 'Bachelor of Science in Computer Engineering' }
+  // As Greenhouse lists them: by campus, and a named degree before the plain one
+  const campuses = (q) => [`${q} - College Station`, `${q} - Commerce`, `${q} - West Lafayette`, `West ${q}`]
+  const degrees = () => ['Master of Business Administration (M.B.A.)', "Master's Degree", "Bachelor's Degree"]
+
+  it('chooses the matching suggestion for country, city, each school and each degree', async () => {
+    document.body.innerHTML = ''
+    pickList('country', 'Country', () => ['United States Minor Outlying Islands +1', 'United States +1'])
+    pickList('candidate-location', 'Location (City)', (q) => [`${q}, Minnesota, United States`, `${q}, Texas, United States`])
+    pickList('school--0', 'School', campuses)
+    pickList('degree--0', 'Degree', degrees)
+    pickList('school--1', 'School', campuses)
+    pickList('degree--1', 'Degree', degrees)
+
+    const report = await globalThis.JSA_FILL.fill(document, education, null)
+
+    expect(chosen('country')).toBe('United States +1')
+    expect(chosen('candidate-location')).toBe('Austin, Texas, United States')
+    expect(chosen('school--0')).toBe('Texas A&M University - College Station')
+    expect(chosen('degree--0')).toBe("Master's Degree")
+    expect(chosen('school--1')).toBe('Purdue University - West Lafayette')
+    expect(chosen('degree--1')).toBe("Bachelor's Degree")
+    expect(report.toChoose).toEqual([])
+  })
+
+  it('never guesses a campus: a school named without one is left, with the reason', async () => {
+    document.body.innerHTML = ''
+    pickList('school--0', 'School', campuses)
+
+    const report = await globalThis.JSA_FILL.fill(document, { ...education, school: 'Texas A&M University' }, null, {}, { waitMs: 400 })
+
+    expect(chosen('school--0')).toBeUndefined()
+    expect(report.toChoose).toEqual(['School: Several campuses match: choose yours, or add the campus to the school in your Profile'])
+  })
+
+  it('keeps a choice already made, and lists a list with no matching suggestion', async () => {
+    document.body.innerHTML = ''
+    const country = pickList('country', 'Country', () => ['United States +1'])
+    country.querySelector('.select__value-container').innerHTML = '<div class="select__single-value">Canada +1</div>'
+    pickList('school--0', 'School', () => ['Rice University'])
+    pickList('how', 'How did you hear about us?', () => ['LinkedIn', 'A friend'])
+
+    const report = await globalThis.JSA_FILL.fill(document, education, null, {}, { waitMs: 400 })
+
+    expect(chosen('country')).toBe('Canada +1')
+    expect(chosen('school--0')).toBeUndefined()
+    expect(document.getElementById('school--0').value).toBe('')
+    expect(chosen('how')).toBeUndefined()
+    expect(report.toChoose).toEqual(['School', 'How did you hear about us?'])
   })
 })

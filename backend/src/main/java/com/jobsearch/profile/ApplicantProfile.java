@@ -32,6 +32,9 @@ public class ApplicantProfile {
     private String school;
     private String degree;
     private String graduationYear;
+    /** An earlier degree, such as the bachelor's before a master's. */
+    private String previousSchool;
+    private String previousDegree;
     private Instant updatedAt;
 
     protected ApplicantProfile() {}
@@ -56,12 +59,14 @@ public class ApplicantProfile {
         school = f.school();
         degree = f.degree();
         graduationYear = f.graduationYear();
+        previousSchool = f.previousSchool();
+        previousDegree = f.previousDegree();
         updatedAt = now;
     }
 
     ProfileFields fields() {
         return new ProfileFields(firstName, lastName, email, phone, city, state, country, linkedinUrl, githubUrl, websiteUrl,
-                currentCompany, currentTitle, school, degree, graduationYear);
+                currentCompany, currentTitle, school, degree, graduationYear, previousSchool, previousDegree);
     }
 
     Instant getUpdatedAt() {

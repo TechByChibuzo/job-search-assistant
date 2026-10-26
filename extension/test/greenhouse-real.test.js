@@ -19,7 +19,7 @@ const profile = {
 }
 
 describe('a real Greenhouse form, as Stripe embeds it', () => {
-  it('fills the text fields, attaches the resume, and leaves pick-lists and personal questions for the owner', () => {
+  it('fills the text fields, attaches the resume, and leaves pick-lists and personal questions for the owner', async () => {
     document.documentElement.innerHTML = readFileSync(join(process.cwd(), 'test/fixtures/greenhouse-stripe-apply.html'), 'utf8')
     globalThis.DataTransfer = class {
       constructor() {
@@ -38,7 +38,14 @@ describe('a real Greenhouse form, as Stripe embeds it', () => {
       })
     }
 
-    const report = globalThis.JSA_FILL.fill(document, profile, { base64: btoa('%PDF'), fileName: 'r.pdf', type: 'application/pdf' })
+    // Saved without scripts, the form's pick-lists never show suggestions: nothing is chosen, and they're listed
+    const report = await globalThis.JSA_FILL.fill(
+      document,
+      profile,
+      { base64: btoa('%PDF'), fileName: 'r.pdf', type: 'application/pdf' },
+      {},
+      { waitMs: 50 },
+    )
 
     const byId = (id) => document.getElementById(id).value
     expect(byId('first_name')).toBe('Jane')
@@ -52,7 +59,7 @@ describe('a real Greenhouse form, as Stripe embeds it', () => {
     expect(report.resume).toBe('attached')
     expect(document.getElementById('cover_letter').files).toHaveLength(0)
 
-    // Search-and-pick lists can't be typed into: they're left alone and listed
+    // With no suggestions to pick from, the lists are left empty and listed
     expect(byId('country')).toBe('')
     expect(byId('candidate-location')).toBe('')
     expect(report.toChoose).toEqual(expect.arrayContaining(['Country', 'Location (City)']))
