@@ -45,3 +45,17 @@ export function embeddedForm(frameUrls) {
   }
   return null
 }
+
+/**
+ * The role and company an application page's title names, as best it can be read: Greenhouse's "Job Application
+ * for Software Engineer at Stripe", "Software Engineer at Stripe", "Stripe - Software Engineer" (Lever) or
+ * "Software Engineer @ Stripe" (Ashby). The owner checks both before saving.
+ */
+export function roleFromTitle(pageTitle) {
+  const t = String(pageTitle ?? '').replace(/\s+/g, ' ').trim()
+  let m = t.match(/^(?:job application for |apply for |application for )?(.+?) (?:at|@) (.+?)(?: [|–-] .*)?$/i)
+  if (m) return { title: m[1].trim(), company: m[2].trim() }
+  m = t.match(/^(.+?) [-–|] (.+)$/)
+  if (m) return { title: m[2].trim(), company: m[1].trim() }
+  return { title: t, company: '' }
+}

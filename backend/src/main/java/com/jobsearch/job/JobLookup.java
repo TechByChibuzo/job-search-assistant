@@ -38,6 +38,12 @@ public class JobLookup {
                 .replaceFirst("(?i)/(apply|application)$", "");
     }
 
+    /** An open role with this title at a company with this name, ignoring case: the same role saved another way. */
+    @Transactional(readOnly = true)
+    public Optional<Job> findOpen(String company, String title) {
+        return jobs.findOpenByCompanyAndTitle(company.strip(), title.strip()).stream().findFirst();
+    }
+
     @Transactional(readOnly = true)
     public Job get(long id) {
         return jobs.findWithCompanyById(id).orElseThrow(() -> new NotFoundException("No job with id " + id));

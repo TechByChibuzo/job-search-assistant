@@ -176,7 +176,8 @@ public class TrackerService {
             if (title == null || title.isBlank() || company == null || company.isBlank()) {
                 throw new BadRequestException("This page isn't a role the app knows. Say its title and company to save it.");
             }
-            return manualJobs.add(pageUrl, title, company, null, null).job();
+            // The role may be saved already from another link (LinkedIn, say): the application belongs to it
+            return jobs.findOpen(company, title).orElseGet(() -> manualJobs.add(pageUrl, title, company, null, null).job());
         });
         Instant now = clock.instant();
         Pursuit p = pursuitFor(job, now);

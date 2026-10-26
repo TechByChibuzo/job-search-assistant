@@ -19,6 +19,9 @@ interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecut
 
     List<Job> findByClosedAtIsNullAndDescriptionIsNotNull();
 
+    @Query("select j from Job j where j.closedAt is null and lower(j.company.name) = lower(:company) and lower(j.title) = lower(:title) order by j.id")
+    List<Job> findOpenByCompanyAndTitle(String company, String title);
+
     Optional<Job> findFirstByUrl(String url);
 
     /** Roles whose own id appears in a page's link: an application page usually carries the posting's id. */

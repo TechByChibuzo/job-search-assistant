@@ -100,6 +100,19 @@ class TrackerIT {
     }
 
     @Test
+    void anApplicationOnAnotherSiteIsRecordedOnTheRoleAlreadySaved() throws Exception {
+        long saved = pasteRole("https://www.linkedin.com/jobs/view/4473964041/", "Software Engineer, Bridge", "Stripe");
+
+        mvc.perform(post("/api/applications").contentType(MediaType.APPLICATION_JSON)
+                        .content(json("url", "https://job-boards.greenhouse.io/embed/job_app?for=stripe&token=7277110",
+                                "title", "software engineer, bridge", "company", "STRIPE")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.role.id").value(saved))
+                .andExpect(jsonPath("$.stage").value("APPLIED"));
+        mvc.perform(get("/api/jobs").param("includeApplied", "true")).andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
     void rejectsSomethingThatIsNotALink() throws Exception {
         mvc.perform(post("/api/jobs").contentType(MediaType.APPLICATION_JSON)
                         .content(json("url", "javascript:alert(1)", "title", "x", "company", "y")))

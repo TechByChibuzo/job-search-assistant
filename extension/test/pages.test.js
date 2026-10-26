@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classify, embeddedForm, knownSystem } from '../lib/pages.js'
+import { classify, embeddedForm, knownSystem, roleFromTitle } from '../lib/pages.js'
 
 describe('classify', () => {
   it('tells profiles, jobs and applications apart', () => {
@@ -37,5 +37,15 @@ describe('embeddedForm', () => {
   it('ignores other frames and lookalike hosts', () => {
     expect(embeddedForm(['https://greenhouse.io.evil.example/embed', 'http://boards.greenhouse.io/x'])).toBeNull()
     expect(embeddedForm([])).toBeNull()
+  })
+})
+
+describe('roleFromTitle', () => {
+  it('reads the role and company from the ways hiring systems title their pages', () => {
+    expect(roleFromTitle('Job Application for Software Engineer, Bridge at Stripe')).toEqual({ title: 'Software Engineer, Bridge', company: 'Stripe' })
+    expect(roleFromTitle('Backend Engineer @ Plaid')).toEqual({ title: 'Backend Engineer', company: 'Plaid' })
+    expect(roleFromTitle('Spotify - Backend Engineer')).toEqual({ title: 'Backend Engineer', company: 'Spotify' })
+    expect(roleFromTitle('Careers')).toEqual({ title: 'Careers', company: '' })
+    expect(roleFromTitle(undefined)).toEqual({ title: '', company: '' })
   })
 })

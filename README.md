@@ -55,7 +55,7 @@ flowchart LR
 - **Backend:** Java 21, Spring Boot 3.5, Spring Data JPA, Flyway, `RestClient`, jsoup, the Gmail API with Google OAuth, and Claude through the Anthropic Java SDK. Organised by feature (`company`, `job`, `job.source`, `contact`, `tracker`, `alerts`, `ai`, `profile`, `answers`, `documents`). Each site is one class behind a `JobSource` interface.
 - **Extension:** Chrome Manifest V3 in plain JavaScript, with only `activeTab` access; the page reader and form filler are tested against sample pages and a real Lever form.
 - **Frontend:** React 19, Vite, Tailwind CSS 4, TanStack Query, lucide icons. Filters and the open role live in the URL, so any view can be bookmarked. Light and dark themes.
-- **Tests:** 392 in total. Every site source is tested against a trimmed copy of a real response, and the alert parsers against sample emails; the sync and the REST API run against real Postgres via Testcontainers; UI components are tested with Vitest and Testing Library. CI runs everything on every push.
+- **Tests:** 395 in total. Every site source is tested against a trimmed copy of a real response, and the alert parsers against sample emails; the sync and the REST API run against real Postgres via Testcontainers; UI components are tested with Vitest and Testing Library. CI runs everything on every push.
 
 The full design, with diagrams of the sync, the data model, the deployment path and the roadmap, is in [docs/architecture.md](docs/architecture.md). The decisions with real trade-offs are in [docs/adr](docs/adr).
 
