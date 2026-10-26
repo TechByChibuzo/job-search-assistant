@@ -1,6 +1,6 @@
 import { ArrowLeft, Check, Copy, ExternalLink, Stamp } from 'lucide-react'
 import { useState } from 'react'
-import { useJob, useSetJobClosed } from '../api/hooks'
+import { useJob, useJobDescription, useSetJobClosed } from '../api/hooks'
 import { formatDate, timeAgo } from '../lib/dates'
 import { workplaceLabel } from '../lib/labels'
 import { safeHref } from '../lib/links'
@@ -47,6 +47,7 @@ function DetailSkeleton() {
 
 export default function JobDetail({ id, onClose }) {
   const { data, isPending, error } = useJob(id)
+  const describing = useJobDescription(id, Boolean(data) && !data.description)
   const setClosed = useSetJobClosed()
 
   if (isPending) return <DetailSkeleton />
@@ -144,7 +145,7 @@ export default function JobDetail({ id, onClose }) {
         <DocumentsPanel job={job} />
       </div>
       <div className="max-w-[70ch] p-6 text-[15px] leading-relaxed text-ink/90 sm:p-8">
-        <Description text={description} job={job} url={postingUrl} />
+        <Description text={description} job={job} url={postingUrl} fetching={describing.isFetching} />
       </div>
     </article>
   )

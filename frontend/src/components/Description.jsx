@@ -24,7 +24,17 @@ function NoDescription({ job, url }) {
   )
 }
 
-export default function Description({ text, job, url }) {
+export default function Description({ text, job, url, fetching = false }) {
+  if (!text && fetching) {
+    return (
+      <div className="space-y-2" aria-busy="true">
+        <p className="text-sm text-slate">Getting the description from {job ? `${job.companyName}’s` : 'the company’s'} site…</p>
+        <div className="skeleton h-4 w-11/12" />
+        <div className="skeleton h-4 w-4/5" />
+        <div className="skeleton h-4 w-2/3" />
+      </div>
+    )
+  }
   if (!text) return <NoDescription job={job} url={url} />
   return (
     <div className="space-y-3">

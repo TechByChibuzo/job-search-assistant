@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 class TailorServiceTest {
 
     private final ObjectMapper json = new ObjectMapper();
-    private final TailorService service = new TailorService(null, null, null, json);
+    private final TailorService service = new TailorService(null, null, null, json, null);
     private final SourceCheck check = new SourceCheck("""
             Experience. Software Engineer, July 2022 – September 2025, Oracle Corporation, Austin, TX.
             Built REST APIs in Java and Spring Boot. Cut query latency by 40% with indexes.

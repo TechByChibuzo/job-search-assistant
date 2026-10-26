@@ -43,13 +43,16 @@ class JobController {
     private final AppProperties properties;
     private final Clock clock;
     private final TrackedJobs tracked;
+    private final JobDescriptions descriptions;
 
-    JobController(JobRepository jobs, ManualJobService manualJobs, AppProperties properties, Clock clock, TrackedJobs tracked) {
+    JobController(JobRepository jobs, ManualJobService manualJobs, AppProperties properties, Clock clock, TrackedJobs tracked,
+            JobDescriptions descriptions) {
         this.jobs = jobs;
         this.manualJobs = manualJobs;
         this.properties = properties;
         this.clock = clock;
         this.tracked = tracked;
+        this.descriptions = descriptions;
     }
 
     /**
@@ -96,7 +99,8 @@ class JobController {
     @PostMapping
     @Transactional
     ResponseEntity<AddJobResponse> add(@Valid @RequestBody AddJobRequest request) {
-        var added = manualJobs.add(request.url(), request.title(), request.company(), request.location(), request.workplace());
+        var added = manualJobs.add(request.url(), request.title(), request.company(), request.location(), request.workplace(),
+                request.description());
         var body = new AddJobResponse(JobSummary.of(added.job(), newSince()), added.alreadySaved(), added.trackableBoard());
         return ResponseEntity.status(added.alreadySaved() ? HttpStatus.OK : HttpStatus.CREATED).body(body);
     }
@@ -109,6 +113,16 @@ class JobController {
                 ? jobs.findWithCompanyById(id).orElseThrow(() -> new NotFoundException("No job with id " + id))
                 : manualJobs.setClosed(id, request.closed());
         return JobSummary.of(job, newSince());
+    }
+
+    /**
+     * Fetches the role's description when its feed had none (Workday, Avature, roles saved from LinkedIn), then
+     * returns the role. Called by the page when it opens such a role; a recent failed attempt isn't repeated.
+     */
+    @PostMapping("/{id}/description")
+    JobDetail describe(@PathVariable long id) {
+        descriptions.ensure(id);
+        return get(id);
     }
 
     @GetMapping("/{id}")

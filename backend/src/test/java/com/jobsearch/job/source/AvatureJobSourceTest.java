@@ -40,4 +40,32 @@ class AvatureJobSourceTest {
         assertThat(result.jobs()).hasSize(3);
         assertThat(result.coveredSince()).isNull();
     }
+
+    @Test
+    void describesOneRoleFromItsPage() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        String url = "https://bloomberg.avature.net/careers/JobDetail/Senior-Software-Engineer-Media-API-Platform/45685";
+        server.expect(requestTo(url)).andRespond(withSuccess(Fixtures.read("avature-job.html"), MediaType.TEXT_HTML));
+
+        var description = new AvatureJobSource(builder, Pacer.immediate(5)).describe("bloomberg/careers", "45685", url);
+
+        assertThat(description).get(org.assertj.core.api.InstanceOfAssertFactories.STRING)
+                .startsWith("Bloomberg Media empowers global business leaders")
+                .contains("Salary Range")
+                .doesNotContain("<div");
+        server.verify();
+    }
+
+    @Test
+    void readsOnlyPagesOnTheBoardsOwnSite() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        var source = new AvatureJobSource(builder, Pacer.immediate(5));
+
+        assertThat(source.describe("bloomberg/careers", "1", "https://evil.example/careers/JobDetail/x/1")).isEmpty();
+        assertThat(source.describe("bloomberg/careers", "1", "https://bloomberg.avature.net/other/JobDetail/x/1")).isEmpty();
+        assertThat(source.describe("bloomberg/careers", "1", "https://bloomberg.avature.net.evil.example/careers/JobDetail/x/1")).isEmpty();
+        server.verify();
+    }
 }

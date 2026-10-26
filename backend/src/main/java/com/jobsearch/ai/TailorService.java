@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.stereotype.Service;
 
 import com.jobsearch.job.Job;
+import com.jobsearch.job.JobDescriptions;
 import com.jobsearch.job.JobLookup;
 
 /**
@@ -104,13 +105,15 @@ public class TailorService {
     private final Claude claude;
     private final ResumeStore resumes;
     private final JobLookup jobs;
+    private final JobDescriptions descriptions;
     private final ObjectMapper json;
 
-    TailorService(Claude claude, ResumeStore resumes, JobLookup jobs, ObjectMapper json) {
+    TailorService(Claude claude, ResumeStore resumes, JobLookup jobs, ObjectMapper json, JobDescriptions descriptions) {
         this.claude = claude;
         this.resumes = resumes;
         this.jobs = jobs;
         this.json = json;
+        this.descriptions = descriptions;
     }
 
     public enum Kind {
@@ -120,6 +123,7 @@ public class TailorService {
 
     /** The generated document as JSON, with any problems recorded beside the parts they concern. */
     public JsonNode generate(long jobId, Kind kind) {
+        descriptions.ensure(jobId);
         Job job = jobs.get(jobId);
         Resume resume = resumes.current().orElseThrow(() -> new AiException(resumes.describeFolder()));
         String posting = MatchService.posting(job).replace("\n\nAssess the candidate's fit for this role.", "");

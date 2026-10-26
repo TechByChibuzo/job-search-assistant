@@ -111,7 +111,14 @@ async function addRoleView(tab) {
           try {
             const res = await api('/jobs', {
               method: 'POST',
-              body: { url: role.url, title: title.value.trim(), company: company.value.trim(), location: location.value.trim() || undefined },
+              body: {
+                url: role.url,
+                title: title.value.trim(),
+                company: company.value.trim(),
+                location: location.value.trim() || undefined,
+                // What the owner sees under "About the job", so tailoring and fit read the real posting
+                description: role.description || undefined,
+              },
             })
             status.replaceChildren(
               note(
@@ -127,7 +134,13 @@ async function addRoleView(tab) {
         },
       },
       h('h1', {}, 'Add this role'),
-      h('p', { class: 'faint' }, 'It joins your inbox, where you can check your fit and track it.'),
+      h(
+        'p',
+        { class: 'faint' },
+        role.description
+          ? 'It joins your inbox with its description, so you can check your fit, tailor your resume and track it.'
+          : 'It joins your inbox, where you can check your fit and track it.',
+      ),
       field('Title', title),
       h('div', { class: 'row' }, field('Company', company), field('Location', location)),
       add,

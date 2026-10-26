@@ -70,7 +70,8 @@ final class JobDtos {
             @NotBlank @Size(max = 300) String title,
             @NotBlank @Size(max = 200) String company,
             @Size(max = 300) String location,
-            Workplace workplace) {}
+            Workplace workplace,
+            @Size(max = 50_000) String description) {}
 
     /**
      * @param alreadySaved   the link was saved before; this is that role

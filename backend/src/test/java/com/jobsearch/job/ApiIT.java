@@ -1,5 +1,6 @@
 package com.jobsearch.job;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
@@ -299,6 +300,70 @@ class ApiIT {
         mvc.perform(get("/api/jobs").param("needsSponsorship", "true")).andExpect(jsonPath("$.totalElements").value(0));
         mvc.perform(get("/api/jobs/summary").param("needsSponsorship", "true")).andExpect(jsonPath("$.newJobs").value(0));
         mvc.perform(get("/api/jobs")).andExpect(jsonPath("$.content[0].companyNoSponsorship").value(true));
+    }
+
+    @Test
+    void aRoleWhoseFeedHadNoDescriptionIsDescribedOnceAndKeepsItThroughSyncs() throws Exception {
+        long id = createCompany("https://boards.greenhouse.io/acme");
+        Instant posted = Instant.now().minus(Duration.ofHours(2));
+        FetchedJob bare = new FetchedJob("1", "Backend Engineer", null, null, Workplace.UNKNOWN, null, posted, "https://example.com/jobs/1", null);
+        feed.returns(bare);
+        syncCompany(id);
+        long jobId = jobs.findByCompanyId(id).getFirst().getId();
+        feed.describes("Build payment rails. Candidates must be a U.S. citizen.");
+
+        mvc.perform(post("/api/jobs/" + jobId + "/description"))
+                .andExpect(jsonPath("$.description").value("Build payment rails. Candidates must be a U.S. citizen."))
+                // The visa check reads the new description too
+                .andExpect(jsonPath("$.summary.visaRestriction").value("CITIZENS_ONLY"));
+        mvc.perform(post("/api/jobs/" + jobId + "/description")).andExpect(status().isOk());
+        assertThat(feed.describeCalls).isEqualTo(1);
+
+        // The next sync's listing has no description; the one found stays
+        feed.returns(bare);
+        syncCompany(id);
+        mvc.perform(get("/api/jobs/" + jobId)).andExpect(jsonPath("$.description").value("Build payment rails. Candidates must be a U.S. citizen."));
+    }
+
+    @Test
+    void aRoleSavedFromLinkedInIsDescribedFromTheCompanysOwnBoard() throws Exception {
+        String added = mvc.perform(post("/api/jobs").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"url\": \"https://www.linkedin.com/jobs/view/4473964041/\", \"title\": \"Software Engineer, Bridge\", \"company\": \"Stripe\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long jobId = com.jayway.jsonpath.JsonPath.<Integer>read(added, "$.job.id").longValue();
+        // Stripe's Greenhouse board, under its name, lists the same role with its description
+        feed.returns(new FetchedJob("7277110", "Software engineer - Bridge", null, null, Workplace.UNKNOWN, null, Instant.now(),
+                "https://stripe.com/jobs/search?gh_jid=7277110", "Bridge builds stablecoin infrastructure."));
+
+        mvc.perform(post("/api/jobs/" + jobId + "/description"))
+                .andExpect(jsonPath("$.description").value("Bridge builds stablecoin infrastructure."));
+    }
+
+    @Test
+    void aRoleAddedFromTheExtensionKeepsTheDescriptionTheOwnerSaw() throws Exception {
+        String link = "{\"url\": \"https://www.linkedin.com/jobs/view/4012345678/\", \"title\": \"Engineer\", \"company\": \"Nooks\"";
+        String added = mvc.perform(post("/api/jobs").contentType(MediaType.APPLICATION_JSON).content(link + "}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long jobId = com.jayway.jsonpath.JsonPath.<Integer>read(added, "$.job.id").longValue();
+        mvc.perform(get("/api/jobs/" + jobId)).andExpect(jsonPath("$.description").doesNotExist());
+
+        // Added again from the extension, now with what the page showed: the saved role gets it
+        mvc.perform(post("/api/jobs").contentType(MediaType.APPLICATION_JSON).content(link + ", \"description\": \"Build the dialer.\"}"))
+                .andExpect(jsonPath("$.alreadySaved").value(true));
+        mvc.perform(get("/api/jobs/" + jobId)).andExpect(jsonPath("$.description").value("Build the dialer."));
+    }
+
+    @Test
+    void aRoleNoSiteCanDescribeIsNotAskedAboutAgainForADay() throws Exception {
+        long id = createCompany("https://boards.greenhouse.io/acme");
+        feed.returns(new FetchedJob("1", "Backend Engineer", null, null, Workplace.UNKNOWN, null, Instant.now(), "https://example.com/jobs/1", null));
+        syncCompany(id);
+        long jobId = jobs.findByCompanyId(id).getFirst().getId();
+
+        mvc.perform(post("/api/jobs/" + jobId + "/description")).andExpect(jsonPath("$.description").doesNotExist());
+        mvc.perform(post("/api/jobs/" + jobId + "/description")).andExpect(status().isOk());
+        assertThat(feed.describeCalls).isEqualTo(1);
     }
 
     @Test

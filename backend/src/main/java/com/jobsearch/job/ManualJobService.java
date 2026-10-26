@@ -46,16 +46,28 @@ public class ManualJobService {
      */
     @Transactional
     public AddedJob add(String url, String title, String companyName, String location, Workplace workplace) {
+        return add(url, title, companyName, location, workplace, null);
+    }
+
+    /**
+     * @param description the posting's text when the owner's browser could see it (the extension, on a LinkedIn
+     *                    job they're viewing); it also fills in a role saved before without one
+     */
+    @Transactional
+    public AddedJob add(String url, String title, String companyName, String location, Workplace workplace, String description) {
         String link = checkLink(url);
+        Instant now = clock.instant();
         Optional<Job> existing = jobs.findFirstByUrl(link);
         if (existing.isPresent()) {
+            if (description != null && !description.isBlank()) {
+                existing.get().recordDescription(description, now);
+            }
             return new AddedJob(existing.get(), true, null);
         }
-        Instant now = clock.instant();
         Company company = companies.findOrCreateManual(companyName);
         FetchedJob fetched = new FetchedJob("manual:" + link, title, null, location,
                 workplace == null ? Workplace.UNKNOWN.orFromLocation(location) : workplace,
-                Region.fromLocation(location), null, link, null);
+                Region.fromLocation(location), null, link, description == null || description.isBlank() ? null : description.strip());
         Job job = jobs.save(Job.manual(company, fetched, now));
         DetectedBoard board = detector.detect(link)
                 .filter(b -> b.ats().isSyncable() && company.getAts() == AtsType.MANUAL)

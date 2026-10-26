@@ -1,5 +1,6 @@
 package com.jobsearch.job.source;
 
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -27,6 +28,8 @@ class WorkdayJobSource implements JobSource {
 
     static final int PAGE_SIZE = 20;
     private static final Pattern BOARD = Pattern.compile("([a-z0-9-]+)\\.(wd\\d+)/([A-Za-z0-9_-]+)");
+    /** A role's path on its board, as listings give it: "/job/US-CA-Santa-Clara/Engineer_JR123". */
+    private static final Pattern EXTERNAL_PATH = Pattern.compile("/job/[A-Za-z0-9_.,~()%-]+(/[A-Za-z0-9_.,~()%-]+)*");
     private static final Pattern DAYS_AGO = Pattern.compile("(\\d+)\\+? Days? Ago", Pattern.CASE_INSENSITIVE);
 
     private final RestClient.Builder builder;
@@ -40,6 +43,22 @@ class WorkdayJobSource implements JobSource {
     @Override
     public AtsType type() {
         return AtsType.WORKDAY;
+    }
+
+    /** One role's details, from the same API the careers page loads for it: {@code GET …/{site}{externalPath}}. */
+    @Override
+    public Optional<String> describe(String board, String externalId, String url) {
+        if (externalId == null || !EXTERNAL_PATH.matcher(externalId).matches()) {
+            return Optional.empty();
+        }
+        Site site = Site.parse(board);
+        JsonNode details = builder.clone().build().get()
+                .uri(URI.create(site.host() + "/wday/cxs/" + site.tenant() + "/" + site.site() + externalId))
+                .retrieve()
+                .body(JsonNode.class);
+        return Optional.ofNullable(details)
+                .map(d -> Html.toText(d.path("jobPostingInfo").path("jobDescription").asText(null)))
+                .filter(text -> !text.isBlank());
     }
 
     @Override

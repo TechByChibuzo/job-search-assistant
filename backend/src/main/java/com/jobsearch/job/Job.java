@@ -89,6 +89,9 @@ public class Job {
     /** The sentence the restriction was read from. */
     private String visaEvidence;
 
+    /** When a description was last sought for a role whose feed left it out (see JobDescriptions). */
+    private Instant descriptionCheckedAt;
+
     protected Job() {}
 
     Job(Company company, FetchedJob fetched, Instant now, boolean baseline) {
@@ -115,10 +118,26 @@ public class Job {
         this.region = fetched.region();
         this.postedAt = fetched.postedAt();
         this.url = fetched.url();
-        this.description = fetched.description();
+        // A feed without descriptions mustn't wipe one found for the role separately
+        if (fetched.description() != null && !fetched.description().isBlank() || descriptionCheckedAt == null) {
+            this.description = fetched.description();
+        }
         checkVisa();
         this.lastSeenAt = now;
         this.closedAt = null;
+    }
+
+    /** A description found for a role whose feed had none; the visa check reads it too. */
+    void recordDescription(String text, Instant at) {
+        if (text != null && !text.isBlank() && (description == null || description.isBlank())) {
+            this.description = text.strip();
+            checkVisa();
+        }
+        this.descriptionCheckedAt = at;
+    }
+
+    public Instant getDescriptionCheckedAt() {
+        return descriptionCheckedAt;
     }
 
     /** Reads the description for visa and legal status restrictions; rerun when the rules improve. */

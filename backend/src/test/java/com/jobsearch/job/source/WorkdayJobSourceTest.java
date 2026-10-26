@@ -80,4 +80,28 @@ class WorkdayJobSourceTest {
         assertThatThrownBy(() -> source.fetch("nvidia.wd5/NVIDIAExternalCareerSite", query))
                 .isInstanceOf(BoardNotFoundException.class);
     }
+
+    @Test
+    void describesOneRoleFromItsDetailsAsPlainText() {
+        server.expect(requestTo("https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite"
+                        + "/job/US-CA-Santa-Clara/Senior-Manager--Software-Engineering---Rack-Scale-Systems-Infrastructure_JR2027577"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(Fixtures.read("workday-job.json"), MediaType.APPLICATION_JSON));
+
+        var description = source.describe("nvidia.wd5/NVIDIAExternalCareerSite",
+                "/job/US-CA-Santa-Clara/Senior-Manager--Software-Engineering---Rack-Scale-Systems-Infrastructure_JR2027577", null);
+
+        assertThat(description).get(org.assertj.core.api.InstanceOfAssertFactories.STRING)
+                .startsWith("NVIDIA has been transforming computer graphics")
+                .contains("• ")
+                .doesNotContain("<p>", "<li>");
+        server.verify();
+    }
+
+    @Test
+    void describesNothingForAnIdThatIsNotARolePath() {
+        assertThat(source.describe("nvidia.wd5/NVIDIAExternalCareerSite", "../../admin", null)).isEmpty();
+        assertThat(source.describe("nvidia.wd5/NVIDIAExternalCareerSite", "@evil.example/job/x", null)).isEmpty();
+        server.verify();
+    }
 }

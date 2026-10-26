@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.stereotype.Service;
 
 import com.jobsearch.job.Job;
+import com.jobsearch.job.JobDescriptions;
 import com.jobsearch.job.JobLookup;
 import com.jobsearch.job.JobMatches;
 
@@ -21,16 +22,19 @@ public class MatchService {
     private final Claude claude;
     private final ResumeStore resumes;
     private final JobLookup jobs;
+    private final JobDescriptions descriptions;
     private final JobMatches matches;
 
-    MatchService(Claude claude, ResumeStore resumes, JobLookup jobs, JobMatches matches) {
+    MatchService(Claude claude, ResumeStore resumes, JobLookup jobs, JobMatches matches, JobDescriptions descriptions) {
         this.claude = claude;
         this.resumes = resumes;
         this.jobs = jobs;
         this.matches = matches;
+        this.descriptions = descriptions;
     }
 
     public Job score(long jobId) {
+        descriptions.ensure(jobId);
         Job job = jobs.get(jobId);
         Resume resume = resumes.current().orElseThrow(() -> new AiException(resumes.describeFolder()));
         JsonNode answer = claude.ask(Prompts.MATCH, resume, posting(job), Prompts.MATCH_SCHEMA, Claude.Effort.LOW);

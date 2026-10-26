@@ -6,6 +6,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 
 import com.jobsearch.job.Job;
+import com.jobsearch.job.JobDescriptions;
 import com.jobsearch.job.JobLookup;
 
 /** Drafts an answer to an application question from the resume and, when given, the role. */
@@ -35,11 +36,13 @@ public class AnswerDrafter {
     private final Claude claude;
     private final ResumeStore resumes;
     private final JobLookup jobs;
+    private final JobDescriptions descriptions;
 
-    AnswerDrafter(Claude claude, ResumeStore resumes, JobLookup jobs) {
+    AnswerDrafter(Claude claude, ResumeStore resumes, JobLookup jobs, JobDescriptions descriptions) {
         this.claude = claude;
         this.resumes = resumes;
         this.jobs = jobs;
+        this.descriptions = descriptions;
     }
 
     /** @param examples the owner's earlier answers, for tone */
@@ -54,8 +57,12 @@ public class AnswerDrafter {
     public String draft(String question, Long jobId, String pageUrl, String pageTitle, List<String> examples) {
         Resume resume = resumes.current().orElseThrow(() -> new AiException(resumes.describeFolder()));
         StringBuilder request = new StringBuilder();
-        Job job = jobId != null ? jobs.get(jobId)
-                : pageUrl == null || pageUrl.isBlank() ? null : jobs.findForApplicationPage(pageUrl).orElse(null);
+        Long id = jobId != null ? jobId
+                : pageUrl == null || pageUrl.isBlank() ? null : jobs.findForApplicationPage(pageUrl).map(Job::getId).orElse(null);
+        if (id != null) {
+            descriptions.ensure(id);
+        }
+        Job job = id == null ? null : jobs.get(id);
         if (job != null) {
             request.append(MatchService.posting(job).replace("\n\nAssess the candidate's fit for this role.", "")).append("\n\n");
         } else if (pageTitle != null && !pageTitle.isBlank()) {

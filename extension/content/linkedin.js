@@ -69,17 +69,46 @@
       text(doc.querySelector('.jobs-unified-top-card__company-name')) ||
       companyFromTab ||
       ''
-    const description = doc.querySelector(
+    const meta = doc.querySelector(
       '.job-details-jobs-unified-top-card__primary-description-container, .job-details-jobs-unified-top-card__tertiary-description-container',
     )
     // "Seattle, WA · 1 week ago · Over 100 people clicked apply" → "Seattle, WA"
-    const location = (text(description) || metaLine(doc)).split('·')[0].trim()
+    const location = (text(meta) || metaLine(doc)).split('·')[0].trim()
     return {
       title,
       company,
       location,
+      description: about(doc),
       url: id ? `https://www.linkedin.com/jobs/view/${id}/` : url,
     }
+  }
+
+  const ABOUT = '#job-details, .jobs-description__content, .jobs-description-content__text, .jobs-box__html-content'
+
+  /**
+   * The job's description as shown on the page the owner is viewing ("About the job"), with its line breaks,
+   * so the app can tailor to it. Read once, on the owner's click, like the rest of the page.
+   */
+  function about(doc) {
+    let box = doc.querySelector(ABOUT)
+    if (!box) {
+      const heading = [...doc.querySelectorAll('h2, h3')].find((h) => /^about the job$/i.test(text(h)))
+      box = heading?.parentElement ?? null
+    }
+    if (!box) return ''
+    const copy = box.cloneNode(true)
+    copy.querySelectorAll('script, style, button').forEach((el) => el.remove())
+    copy.querySelectorAll('h2, h3').forEach((h) => /^about the job$/i.test(text(h)) && h.remove())
+    copy.querySelectorAll('br').forEach((br) => br.replaceWith('\n'))
+    copy.querySelectorAll('p, li, div, h1, h2, h3, h4, ul, ol').forEach((el) => el.append('\n'))
+    copy.querySelectorAll('li').forEach((li) => li.prepend('• '))
+    return copy.textContent
+      .split('\n')
+      .map((line) => line.replace(/\s+/g, ' ').trim())
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+      .slice(0, 30000)
   }
 
   /**

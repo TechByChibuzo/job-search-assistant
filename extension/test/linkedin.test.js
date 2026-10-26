@@ -54,6 +54,7 @@ describe('reading a LinkedIn job', () => {
       title: 'Software Engineer II',
       company: 'Microsoft',
       location: 'Redmond, WA',
+      description: '',
       url: 'https://www.linkedin.com/jobs/view/4012345678/',
     })
   })
@@ -72,6 +73,7 @@ describe('reading a LinkedIn job', () => {
       title: 'Software Engineer, New Grad',
       company: 'Nooks',
       location: 'San Francisco, CA',
+      description: '',
       url: 'https://www.linkedin.com/jobs/view/4446745306/',
     })
   })
@@ -83,5 +85,21 @@ describe('reading a LinkedIn job', () => {
 
     expect(job.title).toBe('Backend Engineer')
     expect(job.company).toBe('Plaid')
+  })
+
+  it('takes the description the owner is looking at, with its line breaks and bullets', () => {
+    const doc = page(`
+      <div class="job-details-jobs-unified-top-card__job-title"><h1>Software Engineer, Bridge</h1></div>
+      <div id="job-details">
+        <h2>About the job</h2>
+        <p>Bridge builds stablecoin infrastructure.</p>
+        <p><strong>You will</strong></p>
+        <ul><li>Design   payment APIs</li><li>Run them in production</li></ul>
+        <button>See more</button>
+      </div>`)
+
+    const job = globalThis.JSA_LINKEDIN.job(doc, 'https://www.linkedin.com/jobs/view/4473964041/')
+
+    expect(job.description).toBe('Bridge builds stablecoin infrastructure.\n\nYou will\n\n• Design payment APIs\n• Run them in production')
   })
 })

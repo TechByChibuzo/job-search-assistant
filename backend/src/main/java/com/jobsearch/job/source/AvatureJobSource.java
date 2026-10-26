@@ -1,10 +1,13 @@
 package com.jobsearch.job.source;
 
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -38,6 +41,27 @@ class AvatureJobSource implements JobSource {
     @Override
     public AtsType type() {
         return AtsType.AVATURE;
+    }
+
+    /** A role's description, from its page on the board: the page's rich-text fields (about the role, pay). */
+    @Override
+    public Optional<String> describe(String board, String externalId, String url) {
+        Matcher m = BOARD.matcher(board);
+        // Only pages on this board's own site are read, whatever link a role carries
+        if (!m.matches() || url == null || !url.startsWith("https://" + m.group(1) + ".avature.net/" + m.group(2) + "/JobDetail/")) {
+            return Optional.empty();
+        }
+        String html = builder.clone().build().get().uri(URI.create(url)).retrieve().body(String.class);
+        return Optional.ofNullable(describePage(html));
+    }
+
+    static String describePage(String html) {
+        Document doc = Jsoup.parse(html == null ? "" : html);
+        String text = doc.select(".field--rich-text").stream()
+                .map(field -> Html.toText(field.html()))
+                .filter(t -> t != null && !t.isBlank())
+                .collect(Collectors.joining("\n\n"));
+        return text.isBlank() ? null : text;
     }
 
     @Override

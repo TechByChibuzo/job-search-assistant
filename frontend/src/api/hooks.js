@@ -18,6 +18,29 @@ export function useJob(id) {
   return useQuery({ queryKey: ['job', id], queryFn: () => api(`/jobs/${id}`), enabled: id != null })
 }
 
+/**
+ * For a role whose feed had no description, asks the app to fetch it from the role's own page or the company's
+ * own board, once; the role is updated in place when one is found.
+ */
+export function useJobDescription(id, needed) {
+  const client = useQueryClient()
+  return useQuery({
+    queryKey: ['job-description', id],
+    queryFn: async () => {
+      const detail = await api(`/jobs/${id}/description`, { method: 'POST' })
+      if (detail.description) {
+        client.setQueryData(['job', id], detail)
+        // A description can bring a visa label with it
+        client.invalidateQueries({ queryKey: ['jobs'] })
+      }
+      return detail
+    },
+    enabled: id != null && needed,
+    staleTime: Infinity,
+    retry: false,
+  })
+}
+
 /** The inbox header's counts, leaving out roles closed to the owner when they need sponsorship. */
 export function useSummary() {
   const needsSponsorship = useNeedsSponsorship()

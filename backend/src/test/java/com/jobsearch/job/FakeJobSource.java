@@ -2,6 +2,7 @@ package com.jobsearch.job;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import com.jobsearch.company.AtsType;
 import com.jobsearch.job.source.FetchQuery;
@@ -15,6 +16,8 @@ class FakeJobSource implements JobSource {
     private FetchResult feed = FetchResult.complete(new ArrayList<>());
     private RuntimeException failure;
     FetchQuery lastQuery;
+    private String description;
+    int describeCalls;
 
     void returns(FetchedJob... jobs) {
         returns(FetchResult.complete(List.of(jobs)));
@@ -23,6 +26,11 @@ class FakeJobSource implements JobSource {
     void returns(FetchResult result) {
         this.feed = result;
         this.failure = null;
+    }
+
+    /** What describing one role returns; null for nothing. */
+    void describes(String description) {
+        this.description = description;
     }
 
     void fails(RuntimeException failure) {
@@ -41,5 +49,11 @@ class FakeJobSource implements JobSource {
             throw failure;
         }
         return feed;
+    }
+
+    @Override
+    public Optional<String> describe(String board, String externalId, String url) {
+        describeCalls++;
+        return Optional.ofNullable(description);
     }
 }
