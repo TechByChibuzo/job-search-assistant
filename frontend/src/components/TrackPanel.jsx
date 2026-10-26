@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookmarkPlus, MessageSquarePlus } from 'lucide-react'
+import { BookmarkPlus, CheckCircle2, MessageSquarePlus } from 'lucide-react'
 import { useSummary, useTrack, useTracking, useUntrack, useUpdatePursuit } from '../api/hooks'
 import { STAGES } from '../lib/tracker'
 import { primaryButton, secondaryButton } from '../lib/ui'
@@ -16,6 +16,17 @@ export default function TrackPanel({ job }) {
   const untrack = useUntrack()
   const [logging, setLogging] = useState(false)
   const followUpDays = useSummary().data?.followUpDays ?? 5
+
+  /** One click from "I sent my application" to Applied in the tracker, tracking the role first if needed. */
+  async function markApplied(pursuit) {
+    try {
+      const p = pursuit ?? (await track.mutateAsync(job.id))
+      await update.mutateAsync({ id: p.id, stage: 'APPLIED' })
+      toast('Marked as applied. It’s in your tracker.')
+    } catch (e) {
+      toast(e.message, { tone: 'error' })
+    }
+  }
 
   if (tracking.isPending) return <div className="skeleton h-24 w-full" />
   if (tracking.error) return <p className="text-sm text-danger">{tracking.error.message}</p>
@@ -48,7 +59,18 @@ export default function TrackPanel({ job }) {
           </select>
         )}
         {pursuit?.appliedOn && <span className="text-xs text-slate">Applied {pursuit.appliedOn}</span>}
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
+          {(!pursuit || ['SAVED', 'REACHING_OUT', 'REFERRED'].includes(pursuit.stage)) && (
+            <button
+              type="button"
+              onClick={() => markApplied(pursuit)}
+              disabled={track.isPending || update.isPending}
+              className={secondaryButton}
+            >
+              <CheckCircle2 className="size-4" aria-hidden />
+              I applied
+            </button>
+          )}
           {!pursuit && (
             <button
               type="button"

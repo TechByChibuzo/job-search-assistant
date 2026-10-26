@@ -133,11 +133,16 @@ export default function JobDetail({ id, onClose }) {
               onClick={() => setClosed.mutate({ id: job.id, closed: job.open })}
               className="inline-flex h-10 items-center rounded-lg px-3 text-sm font-medium text-slate hover:text-ink"
             >
-              {job.open ? 'Mark as closed' : 'Reopen'}
+              {job.open ? 'Posting taken down' : 'Posting is back up'}
             </button>
           )}
         </div>
-        {job.manual && <p className="mt-3 text-xs text-faint">Added by hand. Syncs leave it alone; close it when the role is gone.</p>}
+        {job.manual && (
+          <p className="mt-3 text-xs text-faint">
+            Added by hand, so syncs leave it alone: say when its posting is taken down. To record that you applied or stopped
+            pursuing it, use the tracker below.
+          </p>
+        )}
       </header>
       <div className="space-y-4 border-b border-rule p-6 sm:p-8">
         <FitPanel job={job} detail={data} />
