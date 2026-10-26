@@ -35,6 +35,10 @@ public class ApplicantProfile {
     /** An earlier degree, such as the bachelor's before a master's. */
     private String previousSchool;
     private String previousDegree;
+    /** The owner's own voluntary self-identification answers, each optional. */
+    private String eeoGender;
+    private String eeoHispanicLatino;
+    private String eeoVeteran;
     private Instant updatedAt;
 
     protected ApplicantProfile() {}
@@ -61,12 +65,16 @@ public class ApplicantProfile {
         graduationYear = f.graduationYear();
         previousSchool = f.previousSchool();
         previousDegree = f.previousDegree();
+        eeoGender = f.eeoGender();
+        eeoHispanicLatino = f.eeoHispanicLatino();
+        eeoVeteran = f.eeoVeteran();
         updatedAt = now;
     }
 
     ProfileFields fields() {
         return new ProfileFields(firstName, lastName, email, phone, city, state, country, linkedinUrl, githubUrl, websiteUrl,
-                currentCompany, currentTitle, school, degree, graduationYear, previousSchool, previousDegree);
+                currentCompany, currentTitle, school, degree, graduationYear, previousSchool, previousDegree,
+                eeoGender, eeoHispanicLatino, eeoVeteran);
     }
 
     Instant getUpdatedAt() {

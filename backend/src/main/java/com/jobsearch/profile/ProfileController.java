@@ -71,7 +71,7 @@ class ProfileController {
         var e = fromResume.extract();
         return new ProfileFields(e.firstName(), e.lastName(), e.email(), e.phone(), e.city(), e.state(), e.country(),
                 e.linkedinUrl(), e.githubUrl(), e.websiteUrl(), e.currentCompany(), e.currentTitle(), e.school(), e.degree(),
-                e.graduationYear(), e.previousSchool(), e.previousDegree());
+                e.graduationYear(), e.previousSchool(), e.previousDegree(), null, null, null);
     }
 
     /** The resume file, for the extension to attach to an application form. */
@@ -93,6 +93,6 @@ class ProfileController {
     }
 
     private static ProfileFields empty() {
-        return new ProfileFields(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        return new ProfileFields(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 }

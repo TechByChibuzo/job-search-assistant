@@ -313,6 +313,74 @@
     return true
   }
 
+  const declined = (t) => /decline|don t wish|do not wish|prefer not|choose not|not to answer/.test(t)
+
+  /**
+   * Equal-opportunity questions the owner chose to answer in their profile: how to recognise each question, and
+   * each saved answer among a form's options. Unset answers, and every other sensitive question (work
+   * authorization, sponsorship, gender identity, disability, race), stay with the owner.
+   */
+  const EEO = [
+    {
+      key: 'eeoGender',
+      question: /\bgender\b|\bsex\b/i,
+      except: /identity|transgender|pronoun|orientation/i,
+      answers: {
+        Male: { queries: ['Male', 'Man'], match: (t) => t === 'male' || t === 'man' },
+        Female: { queries: ['Female', 'Woman'], match: (t) => t === 'female' || t === 'woman' },
+        'Non-binary': { queries: ['Non'], match: (t) => /^non ?binary/.test(t) },
+        Decline: { queries: ['Decline', 'wish', 'Prefer'], match: declined },
+      },
+    },
+    {
+      key: 'eeoHispanicLatino',
+      question: /hispanic|latin[oax]/i,
+      answers: {
+        Yes: { queries: ['Yes'], match: (t) => t === 'yes' || t.startsWith('yes ') },
+        No: { queries: ['No'], match: (t) => t === 'no' || t.startsWith('no ') },
+        Decline: { queries: ['Decline', 'wish', 'Prefer'], match: declined },
+      },
+    },
+    {
+      key: 'eeoVeteran',
+      question: /veteran/i,
+      answers: {
+        'Not a protected veteran': { queries: ['not', 'No'], match: (t) => /\bnot a (protected )?veteran\b/.test(t) || t === 'no' },
+        'Protected veteran': {
+          queries: ['identify', 'protected', 'Yes'],
+          match: (t) => /identify as (one or more|a protected)|^i am a protected veteran/.test(t) || t === 'yes',
+        },
+        Decline: { queries: ['wish', 'Decline', 'Prefer'], match: declined },
+      },
+    },
+  ]
+
+  /** The owner's saved answer for an equal-opportunity question, as { queries, score }, or null. */
+  function eeoFor(questionText, p) {
+    const q = EEO.find((e) => e.question.test(questionText) && !(e.except && e.except.test(questionText)))
+    const answer = q && p[q.key] && q.answers[p[q.key]]
+    return answer ? { queries: answer.queries, score: (t) => (answer.match(t) ? 2 : 0) } : null
+  }
+
+  /** Chooses the matching option of a plain dropdown. */
+  function chooseOption(el, { score }) {
+    const option = [...el.options].find((o) => score(norm(o.textContent)) > 0)
+    if (!option) return false
+    el.value = option.value
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+    el.dispatchEvent(new Event('change', { bubbles: true }))
+    return true
+  }
+
+  /** Clicks the matching radio button of the group a radio belongs to. */
+  function chooseRadio(doc, el, { score }) {
+    const group = el.name ? [...doc.querySelectorAll(`input[type="radio"][name="${CSS.escape(el.name)}"]`)] : [el]
+    const radio = group.find((r) => score(norm(labelText(doc, r) || r.value)) > 0)
+    if (!radio) return false
+    radio.click()
+    return true
+  }
+
   /** Sets a value so React and other frameworks notice: the native setter, then the events a user's typing fires. */
   function setValue(el, value) {
     const proto = Object.getPrototypeOf(el)
@@ -396,6 +464,7 @@
     const needsYou = []
     const toChoose = []
     const seenQuestions = new Set()
+    const handled = new Set()
     const picked = {}
 
     for (const el of doc.querySelectorAll('input, textarea, select')) {
@@ -408,6 +477,27 @@
       // A sensitive question can hide behind innocent options ("She/her"), so check the question too
       const question = choice ? questionOf(doc, el) : label
       if (SENSITIVE.test(description) || (choice && SENSITIVE.test(question))) {
+        if (handled.has(question)) continue
+        // An equal-opportunity answer the owner saved is chosen; anything else is left for them
+        const eeo = !seenQuestions.has(question) && eeoFor(choice ? question : label || description, profile)
+        if (eeo) {
+          let done = false
+          if (choice && type === 'radio') done = chooseRadio(doc, el, eeo)
+          else if (el.tagName === 'SELECT') done = chooseOption(el, eeo)
+          else if (isCombobox(el)) {
+            done = hasChoice(el)
+            for (const query of eeo.queries) {
+              if (done) break
+              done = (await pick(doc, el, { query, score: eeo.score }, waitMs)) === true
+            }
+          }
+          if (done) {
+            handled.add(question)
+            mark(isCombobox(el) ? (comboboxControl(el)?.parentElement ?? el) : el, '#18794e')
+            filled.push(question || label)
+            continue
+          }
+        }
         if (!seenQuestions.has(question)) needsYou.push(question || 'A question')
         seenQuestions.add(question)
         mark(el, '#d97706')

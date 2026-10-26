@@ -39,6 +39,15 @@ const SECTIONS = [
       ['previousDegree', 'Earlier degree'],
     ],
   },
+  {
+    title: 'Equal-opportunity answers',
+    note: 'Optional and voluntary. Set one and the extension picks that answer on forms; leave it blank and the question stays yours. Stored only on this computer.',
+    fields: [
+      ['eeoGender', 'Gender', 'select', ['Male', 'Female', 'Non-binary', ['Decline', 'Decline to self-identify']]],
+      ['eeoHispanicLatino', 'Hispanic or Latino', 'select', ['Yes', 'No', ['Decline', 'Decline to self-identify']]],
+      ['eeoVeteran', 'Veteran status', 'select', ['Not a protected veteran', 'Protected veteran', ['Decline', 'Decline to self-identify']]],
+    ],
+  },
 ]
 
 const EMPTY = Object.fromEntries(SECTIONS.flatMap((s) => s.fields.map(([k]) => [k, ''])))
@@ -101,16 +110,36 @@ function ProfileForm({ initial, resumeFileName, updatedAt }) {
       {SECTIONS.map((section) => (
         <fieldset key={section.title} className="rounded-xl border border-rule bg-surface p-5 shadow-card">
           <legend className="px-1 text-sm font-semibold">{section.title}</legend>
+          {section.note && <p className="-mt-1 mb-4 text-sm text-slate">{section.note}</p>}
           <div className="grid gap-4 sm:grid-cols-2">
-            {section.fields.map(([key, label, type]) => (
+            {section.fields.map(([key, label, type, choices]) => (
               <Field key={key} id={`profile-${key}`} label={label}>
-                <input
-                  id={`profile-${key}`}
-                  type={type ?? 'text'}
-                  value={values[key]}
-                  onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
-                  className={inputClass}
-                />
+                {type === 'select' ? (
+                  <select
+                    id={`profile-${key}`}
+                    value={values[key]}
+                    onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
+                    className={inputClass}
+                  >
+                    <option value="">Leave for me to answer</option>
+                    {choices.map((c) => {
+                      const [value, text] = Array.isArray(c) ? c : [c, c]
+                      return (
+                        <option key={value} value={value}>
+                          {text}
+                        </option>
+                      )
+                    })}
+                  </select>
+                ) : (
+                  <input
+                    id={`profile-${key}`}
+                    type={type ?? 'text'}
+                    value={values[key]}
+                    onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
+                    className={inputClass}
+                  />
+                )}
               </Field>
             ))}
           </div>
@@ -140,7 +169,8 @@ export default function ProfilePage() {
       </p>
       <p className="mt-3 flex max-w-[62ch] items-start gap-2 text-sm text-slate">
         <ShieldCheck className="mt-0.5 size-4 shrink-0 text-ok" aria-hidden />
-        Work authorization, sponsorship, EEO and consent questions are never stored or filled. You answer those on each form.
+        Work authorization, sponsorship and consent questions are never stored or filled: you answer those on each form.
+        Equal-opportunity questions are filled only with answers you choose to save below.
       </p>
       {profile.isPending && <div className="skeleton mt-8 h-96 w-full" />}
       {profile.error && <p className="mt-8 text-sm text-danger">{profile.error.message}</p>}

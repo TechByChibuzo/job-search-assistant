@@ -11,7 +11,7 @@ What it never does:
 - It never reads a page until you click it, and has no standing access to LinkedIn or any other site (`activeTab`).
 - It never navigates, scrolls, clicks or sends anything on LinkedIn.
 - It only fills fields you can see, and on sites other than Greenhouse, Lever, Ashby and Workday it attaches your resume only if you tick the box.
-- It never answers work authorization, sponsorship, EEO, consent or similar questions; those are outlined in amber for you.
+- It never answers work authorization, sponsorship, consent or similar questions; those are outlined in amber for you. Equal-opportunity questions (gender, Hispanic/Latino, veteran status) are answered only with answers you chose to save in your Profile; any you didn't save, and questions such as race, disability or gender identity, stay with you.
 - It never ticks a box or presses submit, and never picks an answer to a question. In search-and-pick lists it chooses only plain facts from your Profile (country, city, school, degree), and only when one suggestion clearly matches; the rest are listed for you. Schools are listed by campus on many forms ("Texas A&M University - College Station"), so include the campus in your Profile's school.
 
 Some companies, such as Stripe, show a Greenhouse or Lever form inside their own careers page. The extension can only read the page you click it on, not a form framed in from another site, so it offers to open the form on its own; click the extension again there.

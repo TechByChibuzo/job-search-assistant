@@ -31,7 +31,7 @@ beforeEach(() => {
   document.body.innerHTML = ''
 })
 
-function form(html) {
+function form(html, owner = profile) {
   document.body.innerHTML = html
   // jsdom's HTMLInputElement.files is read-only; let the filler assign it as Chrome allows
   for (const input of document.querySelectorAll('input[type=file]')) {
@@ -43,7 +43,7 @@ function form(html) {
       },
     })
   }
-  return globalThis.JSA_FILL.fill(document, profile, resume)
+  return globalThis.JSA_FILL.fill(document, owner, resume)
 }
 
 describe('filling a Greenhouse-style form', () => {
@@ -309,5 +309,54 @@ describe('search-and-pick lists', () => {
     expect(document.getElementById('school--0').value).toBe('')
     expect(chosen('how')).toBeUndefined()
     expect(report.toChoose).toEqual(['School', 'How did you hear about us?'])
+  })
+})
+
+describe('equal-opportunity answers the owner saved', () => {
+  const saved = { ...profile, eeoGender: 'Male', eeoHispanicLatino: 'No', eeoVeteran: 'Not a protected veteran' }
+
+  it('chooses them in plain dropdowns and radio buttons, and still never answers authorization or sponsorship', async () => {
+    const report = await form(`
+      <label for="g">Gender</label>
+      <select id="g"><option value="">Select</option><option value="f">Female</option><option value="m">Male</option><option value="d">Decline to self-identify</option></select>
+      <fieldset><legend>Are you Hispanic/Latino?</legend>
+        <label><input type="radio" name="hisp" value="y"> Yes</label>
+        <label><input type="radio" name="hisp" value="n"> No</label></fieldset>
+      <label for="v">Veteran status</label>
+      <select id="v"><option></option><option value="1">I identify as one or more of the classifications of protected veteran</option><option value="2">I am not a protected veteran</option><option value="3">I don't wish to answer</option></select>
+      <label for="gi">Gender identity</label><select id="gi"><option></option><option>Man</option></select>
+      <label for="auth">Are you legally authorized to work in the United States?</label>
+      <select id="auth"><option></option><option>Yes</option><option>No</option></select>
+      <label for="sp">Will you require sponsorship?</label><input id="sp">`,
+      saved,
+    )
+    expect(document.getElementById('g').value).toBe('m')
+    expect(document.querySelector('input[name=hisp][value=n]').checked).toBe(true)
+    expect(document.querySelector('input[name=hisp][value=y]').checked).toBe(false)
+    expect(document.getElementById('v').value).toBe('2')
+    expect(document.getElementById('gi').value).toBe('')
+    expect(document.getElementById('auth').value).toBe('')
+    expect(document.getElementById('sp').value).toBe('')
+    expect(report.needsYou).toEqual(expect.arrayContaining(['Gender identity', 'Will you require sponsorship?']))
+    expect(report.needsYou.some((q) => /authorized/.test(q))).toBe(true)
+    expect(report.needsYou).not.toContain('Gender')
+  })
+
+  it('picks them in search dropdowns, and leaves unsaved ones for the owner', async () => {
+    document.body.innerHTML = ''
+    pickList('gender', 'Gender', (q) => ['Male', 'Female', 'Decline To Self Identify'].filter((o) => o.toLowerCase().includes(q.toLowerCase())))
+    pickList('veteran_status', 'Veteran Status', (q) =>
+      ['I am not a protected veteran', 'I identify as one or more of the classifications of protected veteran', "I don't wish to answer"].filter((o) =>
+        o.toLowerCase().includes(q.toLowerCase()),
+      ),
+    )
+    pickList('hispanic_ethnicity', 'Are you Hispanic/Latino?', () => ['Yes', 'No'])
+
+    const report = await globalThis.JSA_FILL.fill(document, { ...saved, eeoHispanicLatino: null }, null, {}, { waitMs: 400 })
+
+    expect(chosen('gender')).toBe('Male')
+    expect(chosen('veteran_status')).toBe('I am not a protected veteran')
+    expect(chosen('hispanic_ethnicity')).toBeUndefined()
+    expect(report.needsYou).toEqual(['Are you Hispanic/Latino?'])
   })
 })

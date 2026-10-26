@@ -209,7 +209,7 @@ async function fillView(tab) {
       'p',
       { class: 'muted' },
       system ? `${system} form. ` : '',
-      'Fills your details into the fields you can see. Questions about work authorization, sponsorship, EEO or consent are left for you.',
+      'Fills your details into the fields you can see. Work authorization, sponsorship and consent questions are left for you, and equal-opportunity ones unless you saved answers in your Profile.',
     ),
     system ? null : h('p', { class: 'faint' }, `${new URL(tab.url).hostname} isn’t a hiring system the app knows; check it’s the real employer before attaching your resume.`),
     attachLabel,
