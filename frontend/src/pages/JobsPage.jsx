@@ -21,6 +21,7 @@ function readFilters(params) {
     workplace: params.getAll('workplace'),
     newOnly: params.get('newOnly') === 'true',
     sort: params.get('sort') === 'fit' ? 'fit' : 'newest',
+    includeApplied: params.get('includeApplied') === 'true',
   }
 }
 
@@ -32,6 +33,7 @@ function writeFilters(filters, selected) {
   filters.workplace.forEach((w) => next.append('workplace', w))
   if (filters.newOnly) next.set('newOnly', 'true')
   if (filters.sort === 'fit') next.set('sort', 'fit')
+  if (filters.includeApplied) next.set('includeApplied', 'true')
   if (selected) next.set('job', selected)
   return next
 }
@@ -72,7 +74,9 @@ export default function JobsPage() {
   const selected = params.get('job') ? Number(params.get('job')) : null
   const needsSponsorship = useNeedsSponsorship()
   const jobs = useJobs({ ...filters, needsSponsorship })
-  const maxAgeDays = useSummary().data?.maxAgeDays
+  const summary = useSummary().data
+  const maxAgeDays = summary?.maxAgeDays
+  const appliedRoles = summary?.appliedRoles ?? 0
   const [adding, setAdding] = useState(false)
 
   const all = useMemo(() => jobs.data?.pages.flatMap((p) => p.content) ?? [], [jobs.data])
@@ -126,6 +130,15 @@ export default function JobsPage() {
                 `${total.toLocaleString()} open ${total === 1 ? 'role' : 'roles'}${needsSponsorship ? ' that may sponsor' : ''}${
                   maxAgeDays ? `, last ${maxAgeDays} days` : ''
                 }`}
+              {jobs.isSuccess && appliedRoles > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setFilters({ ...filters, includeApplied: !filters.includeApplied })}
+                  className="ml-2 font-medium text-accent hover:underline"
+                >
+                  {filters.includeApplied ? 'Hide applied' : `Show ${appliedRoles} applied`}
+                </button>
+              )}
             </span>
             <span className="flex items-center gap-3">
               <span className="hidden text-xs text-faint xl:inline">

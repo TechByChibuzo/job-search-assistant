@@ -42,12 +42,14 @@ class JobController {
     private final ManualJobService manualJobs;
     private final AppProperties properties;
     private final Clock clock;
+    private final TrackedJobs tracked;
 
-    JobController(JobRepository jobs, ManualJobService manualJobs, AppProperties properties, Clock clock) {
+    JobController(JobRepository jobs, ManualJobService manualJobs, AppProperties properties, Clock clock, TrackedJobs tracked) {
         this.jobs = jobs;
         this.manualJobs = manualJobs;
         this.properties = properties;
         this.clock = clock;
+        this.tracked = tracked;
     }
 
     /**
@@ -65,15 +67,17 @@ class JobController {
             @RequestParam(defaultValue = "false") boolean includeClosed,
             @RequestParam(defaultValue = "false") boolean includeOlder,
             @RequestParam(defaultValue = "false") boolean needsSponsorship,
+            @RequestParam(defaultValue = "false") boolean includeApplied,
             @RequestParam(defaultValue = "newest") String sort,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "50") @Min(1) @Max(200) int size) {
         Instant newSince = newSince();
         Instant postedSince = includeOlder ? null : clock.instant().minus(properties.jobs().maxAge());
         var filter = new JobFilter(q, companyId, workplace, location, newOnly ? newSince : null, postedSince, includeClosed,
-                needsSponsorship, "fit".equalsIgnoreCase(sort));
+                includeApplied ? null : tracked.pastTheInbox(), needsSponsorship, "fit".equalsIgnoreCase(sort));
         var results = jobs.findAll(filter.toSpecification(), PageRequest.of(page, size));
-        return PageResponse.of(results, job -> JobSummary.of(job, newSince));
+        var stages = tracked.stages(results.map(Job::getId).toList());
+        return PageResponse.of(results, job -> JobSummary.of(job, newSince, stages.get(job.getId())));
     }
 
     @GetMapping("/summary")
@@ -85,7 +89,8 @@ class JobController {
                 .toList();
         var rules = properties.jobs();
         return new Summary(since, byCompany.stream().mapToLong(CompanyNew::newJobs).sum(), byCompany,
-                rules.maxAge().toDays(), rules.usOnly(), properties.tracker().followUpAfter().toDays());
+                rules.maxAge().toDays(), rules.usOnly(), properties.tracker().followUpAfter().toDays(),
+                tracked.pastTheInbox().size());
     }
 
     @PostMapping

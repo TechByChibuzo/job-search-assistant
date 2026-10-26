@@ -1,6 +1,7 @@
 import { groupByDay, shortAge } from '../lib/dates'
 import { workplaceLabel } from '../lib/labels'
 import { useSeenJobs } from '../lib/seen'
+import { stageLabel } from '../lib/tracker'
 import { visaNote } from '../lib/visa'
 import FitScore from './FitScore'
 import CompanyLogo from './CompanyLogo'
@@ -40,10 +41,13 @@ function JobRow({ job, selected, unread, onSelect }) {
             {job.companyName}
             {job.team && <span className="text-faint"> / {job.team}</span>}
           </span>
-          {(job.location || workplace || !job.open || visa) && (
+          {(job.location || workplace || !job.open || visa || job.trackedStage) && (
             <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-slate">
               {job.location && <span className="max-w-full truncate">{job.location}</span>}
               {workplace && <span className="rounded bg-sunken px-1.5 py-0.5 font-medium">{workplace}</span>}
+              {job.trackedStage && (
+                <span className="rounded bg-ink px-1.5 py-0.5 font-medium text-paper">{stageLabel(job.trackedStage)}</span>
+              )}
               {visa && (
                 <span className={`rounded px-1.5 py-0.5 font-medium ${visa.excludes ? 'bg-warn-wash text-warn' : 'bg-sunken text-slate'}`}>
                   {visa.label}

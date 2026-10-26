@@ -79,6 +79,27 @@ class TrackerIT {
     }
 
     @Test
+    void anAppliedRoleLeavesTheInboxForTheTrackerAndATrackedOneShowsItsStage() throws Exception {
+        long applied = pasteRole("https://careers.microsoft.com/job/10", "Software Engineer", "Microsoft");
+        long saved = pasteRole("https://careers.microsoft.com/job/11", "Backend Engineer", "Microsoft");
+        pasteRole("https://careers.microsoft.com/job/12", "Data Engineer", "Microsoft");
+        long pursuit = JsonPath.<Integer>read(mvc.perform(post("/api/pursuits").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"jobId\": " + applied + "}")).andReturn().getResponse().getContentAsString(), "$.id");
+        mvc.perform(post("/api/pursuits").contentType(MediaType.APPLICATION_JSON).content("{\"jobId\": " + saved + "}"));
+        mvc.perform(patch("/api/pursuits/" + pursuit).contentType(MediaType.APPLICATION_JSON).content("{\"stage\": \"APPLIED\"}"))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/jobs"))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[?(@.id == " + saved + ")].trackedStage").value("SAVED"))
+                .andExpect(jsonPath("$.content[?(@.title == 'Data Engineer')].trackedStage").value(org.hamcrest.Matchers.contains((Object) null)));
+        mvc.perform(get("/api/jobs").param("includeApplied", "true"))
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.content[?(@.id == " + applied + ")].trackedStage").value("APPLIED"));
+        mvc.perform(get("/api/jobs/summary")).andExpect(jsonPath("$.appliedRoles").value(1));
+    }
+
+    @Test
     void rejectsSomethingThatIsNotALink() throws Exception {
         mvc.perform(post("/api/jobs").contentType(MediaType.APPLICATION_JSON)
                         .content(json("url", "javascript:alert(1)", "title", "x", "company", "y")))

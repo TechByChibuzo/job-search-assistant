@@ -23,4 +23,9 @@ describe('JobList', () => {
     expect(highlighted()).toEqual(['Data Engineer'])
     expect(screen.getAllByText('(new, not opened yet)', { exact: false })).toHaveLength(1)
   })
+
+  it('labels a role the owner is tracking with its stage', () => {
+    render(<JobList jobs={[{ ...job(4, 'Platform Engineer', false), trackedStage: 'REACHING_OUT' }]} onSelect={() => {}} />)
+    expect(screen.getByText('Reaching out')).toBeInTheDocument()
+  })
 })

@@ -32,9 +32,15 @@ final class JobDtos {
             Integer matchScore,
             String matchSummary,
             VisaRestriction visaRestriction,
-            boolean companyNoSponsorship) {
+            boolean companyNoSponsorship,
+            String trackedStage) {
 
         static JobSummary of(Job job, Instant newSince) {
+            return of(job, newSince, null);
+        }
+
+        /** With the role's stage in the tracker, or null when it isn't tracked. */
+        static JobSummary of(Job job, Instant newSince, String trackedStage) {
             return new JobSummary(
                     job.getId(),
                     job.getCompany().getId(),
@@ -53,7 +59,8 @@ final class JobDtos {
                     job.getMatchScore(),
                     job.getMatchSummary(),
                     job.getVisaRestriction(),
-                    job.getCompany().isNoSponsorship());
+                    job.getCompany().isNoSponsorship(),
+                    trackedStage);
         }
     }
 
@@ -78,7 +85,7 @@ final class JobDtos {
      * so the interface can describe them.
      */
     record Summary(Instant newSince, long newJobs, List<CompanyNew> byCompany, long maxAgeDays, boolean usOnly,
-            long followUpDays) {}
+            long followUpDays, long appliedRoles) {}
 
     record CompanyNew(Long companyId, String companyName, long newJobs) {}
 

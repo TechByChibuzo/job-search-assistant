@@ -20,6 +20,7 @@ import com.jobsearch.job.source.Workplace;
  * @param newSince      only new jobs: first seen after this instant, and not part of a first import
  * @param postedSince   hide jobs posted before this (or first seen before it, when the feed has no date)
  * @param includeClosed also list jobs that have left the feed
+ * @param excludeIds    roles to leave out, such as those the owner has already applied to
  * @param needsSponsorship hide roles closed to someone who needs a visa: citizens only, clearance required or no
  *                      sponsorship, by the posting or because the owner marked the company
  * @param bestFitFirst  order by match score, highest first, unscored roles last; otherwise newest first
@@ -32,6 +33,7 @@ record JobFilter(
         Instant newSince,
         Instant postedSince,
         boolean includeClosed,
+        Set<Long> excludeIds,
         boolean needsSponsorship,
         boolean bestFitFirst) {
 
@@ -56,6 +58,9 @@ record JobFilter(
             }
             if (postedSince != null) {
                 where.add(cb.greaterThan(cb.coalesce(root.<Instant>get("postedAt"), root.<Instant>get("firstSeenAt")), postedSince));
+            }
+            if (excludeIds != null && !excludeIds.isEmpty()) {
+                where.add(cb.not(root.get("id").in(excludeIds)));
             }
             if (needsSponsorship) {
                 where.add(cb.or(cb.isNull(root.get("visaRestriction")),
