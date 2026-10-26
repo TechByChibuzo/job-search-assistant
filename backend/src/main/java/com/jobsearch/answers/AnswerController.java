@@ -56,7 +56,9 @@ class AnswerController {
 
     record EditRequest(@Size(max = 1000) String question, @Size(max = 10000) String answer) {}
 
-    record DraftRequest(@NotBlank @Size(max = 1000) String question, Long jobId) {}
+    /** {@code pageUrl} and {@code pageTitle} come from the extension, on the application form being filled. */
+    record DraftRequest(@NotBlank @Size(max = 1000) String question, Long jobId, @Size(max = 2000) String pageUrl,
+            @Size(max = 300) String pageTitle) {}
 
     record Draft(String answer) {}
 
@@ -126,7 +128,7 @@ class AnswerController {
     @Transactional(readOnly = true)
     Draft draft(@Valid @RequestBody DraftRequest r) {
         List<String> examples = answers.findAllByOrderByUsesDescUpdatedAtDesc().stream().map(Answer::getAnswer).limit(3).toList();
-        return new Draft(drafter.draft(r.question(), r.jobId(), examples));
+        return new Draft(drafter.draft(r.question(), r.jobId(), r.pageUrl(), r.pageTitle(), examples));
     }
 
     @ExceptionHandler(AiException.class)

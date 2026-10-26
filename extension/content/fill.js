@@ -267,10 +267,26 @@
     return { filled, answered, needsYou, toChoose, resume: attachResume(doc, resume), pageTitle: doc.title }
   }
 
+  /**
+   * Types one answer the owner approved into the long-answer box whose question it is, outlined in blue.
+   * Never into a box that already has text, a sensitive question, or a box the owner can't see.
+   */
+  function insertAnswer(doc, question, text) {
+    for (const el of doc.querySelectorAll('textarea')) {
+      const label = labelText(doc, el) || el.getAttribute('aria-label') || el.getAttribute('placeholder') || ''
+      if (label !== question || !visible(el) || SENSITIVE.test(describe(doc, el))) continue
+      if (el.value) return 'not-empty'
+      setValue(el, text)
+      mark(el, '#2a78d6')
+      return 'inserted'
+    }
+    return 'not-found'
+  }
+
   /** Addresses of the frames on the page, to spot a hiring system's form embedded from another site. */
   function frames(doc) {
     return [...doc.querySelectorAll('iframe')].map((f) => f.src).filter((src) => /^https:/i.test(src))
   }
 
-  globalThis.JSA_FILL = { fill, questions, frames, keyFor, describe, SENSITIVE }
+  globalThis.JSA_FILL = { fill, questions, insertAnswer, frames, keyFor, describe, SENSITIVE }
 })()

@@ -4,7 +4,7 @@ A Chrome extension that works with the app running on your machine.
 
 - **On a LinkedIn profile:** save the person to your People list, with their title, company and profile link.
 - **On a LinkedIn job:** add the role to your inbox.
-- **On a job application** (Greenhouse, Lever, Ashby, Workday, and most other forms by label): fill your contact details, links, current role and education from your Profile, fill long-answer questions that match one in your answer bank (outlined in blue), and attach your resume. Then, after you submit, record the application in the tracker.
+- **On a job application** (Greenhouse, Lever, Ashby, Workday, and most other forms by label): fill your contact details, links, current role and education from your Profile, fill long-answer questions that match one in your answer bank (outlined in blue), and attach your resume. Long questions with no saved answer can be drafted with Claude right in the popup: edit the draft, put it in the form, and save it for next time. Then, after you submit, record the application in the tracker.
 
 What it never does:
 

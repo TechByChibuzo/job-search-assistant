@@ -209,3 +209,27 @@ label.checkbox input {
   width: auto;
   margin: 0;
 }
+
+h2 {
+  margin: 18px 0 2px;
+  font-size: 14px;
+}
+
+/* One long question to draft, edit and put in the form */
+.draft {
+  margin-top: 10px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.draft .question {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.draft button {
+  margin-top: 10px;
+}

@@ -180,7 +180,7 @@ async function fillView(tab) {
     fillButton.textContent = 'Filling…'
     try {
       const resume = attach.checked ? await resumeFile() : null
-      const answers = await savedAnswers(tab)
+      const { questions, answers } = await savedAnswers(tab)
       const report = await inPage(tab.id, 'content/fill.js', (p, r, a) => globalThis.JSA_FILL.fill(document, p, r, a), [
         profile.fields,
         resume,
@@ -188,7 +188,13 @@ async function fillView(tab) {
       ])
       // Counts toward which answers rise to the top of the bank; a failure here doesn't undo the fill
       report.answered.forEach((a) => api(`/answers/${a.answerId}/used`, { method: 'POST' }).catch(() => {}))
-      result.replaceChildren(...reportView(report, profile.resumeFileName), recordForm(tab, report, profile.resumeFileName))
+      // Long questions with no saved answer can be drafted right here, without switching to the app
+      const unanswered = questions.filter((q) => !report.answered.some((a) => a.question === q))
+      result.replaceChildren(
+        ...reportView(report, profile.resumeFileName),
+        ...draftList(tab, unanswered),
+        recordForm(tab, report, profile.resumeFileName),
+      )
       fillButton.textContent = 'Fill again'
     } catch (err) {
       result.replaceChildren(note('error', err.message))
@@ -212,12 +218,86 @@ async function fillView(tab) {
   )
 }
 
-/** The page's long-answer questions, matched against the answer bank: { question: { answerId, answer } }. */
+/**
+ * The page's long-answer questions, and those matched in the answer bank as { question: { answerId, answer } }.
+ */
 async function savedAnswers(tab) {
-  const questions = await inPage(tab.id, 'content/fill.js', () => globalThis.JSA_FILL.questions(document))
-  if (!questions?.length) return {}
+  const questions = (await inPage(tab.id, 'content/fill.js', () => globalThis.JSA_FILL.questions(document))) ?? []
+  if (!questions.length) return { questions, answers: {} }
   const matches = await api('/answers/match', { method: 'POST', body: { questions: questions.slice(0, 50) } })
-  return Object.fromEntries(matches.map((m) => [m.question, { answerId: m.answerId, answer: m.answer }]))
+  return { questions, answers: Object.fromEntries(matches.map((m) => [m.question, { answerId: m.answerId, answer: m.answer }])) }
+}
+
+function draftList(tab, questions) {
+  if (!questions.length) return []
+  return [
+    h('h2', {}, 'Questions to answer'),
+    h('p', { class: 'faint' }, 'Draft each with Claude from your resume and this role, edit it, then put it in the form.'),
+    ...questions.slice(0, 6).map((q) => draftCard(tab, q)),
+  ]
+}
+
+/** One long question: Claude drafts, the owner edits, and the answer goes into the form only when they say. */
+function draftCard(tab, question) {
+  const draftButton = h('button', { class: 'secondary' }, 'Draft with Claude')
+  const status = h('div')
+  const card = h('div', { class: 'draft' }, h('p', { class: 'question' }, question), draftButton, status)
+
+  draftButton.addEventListener('click', async () => {
+    draftButton.disabled = true
+    draftButton.textContent = 'Drafting… about 10 seconds'
+    try {
+      const { answer } = await api('/answers/draft', {
+        method: 'POST',
+        body: { question, pageUrl: tab.url, pageTitle: (tab.title ?? '').slice(0, 300) },
+      })
+      const text = h('textarea', { rows: 7, 'aria-label': `Your answer to: ${question}` })
+      text.value = answer
+      const save = h('input', { type: 'checkbox', checked: true })
+      const put = h('button', {}, 'Put it in the form')
+      const done = h('div')
+      put.addEventListener('click', async () => {
+        put.disabled = true
+        try {
+          const value = text.value.trim()
+          const outcome = await inPage(tab.id, 'content/fill.js', (q, t) => globalThis.JSA_FILL.insertAnswer(document, q, t), [
+            question,
+            value,
+          ])
+          if (outcome !== 'inserted') {
+            done.replaceChildren(
+              note(
+                'warn',
+                outcome === 'not-empty'
+                  ? 'That box already has text, so it was left alone. Copy this in yourself if you want it.'
+                  : 'Couldn’t find that box on the page any more. Copy this in yourself.',
+              ),
+            )
+            put.disabled = false
+            return
+          }
+          // Saved under the form's own question, so the same question fills itself next time
+          if (save.checked) await api('/answers', { method: 'POST', body: { question, answer: value } })
+          done.replaceChildren(note('ok', save.checked ? 'In the form (outlined in blue) and saved to your answers.' : 'In the form, outlined in blue.'))
+        } catch (err) {
+          done.replaceChildren(note('error', err.message))
+          put.disabled = false
+        }
+      })
+      card.replaceChildren(
+        h('p', { class: 'question' }, question),
+        text,
+        h('label', { class: 'checkbox' }, save, ' Save to my answers for next time'),
+        put,
+        done,
+      )
+    } catch (err) {
+      status.replaceChildren(note('error', err.message))
+      draftButton.disabled = false
+      draftButton.textContent = 'Draft with Claude'
+    }
+  })
+  return card
 }
 
 function reportView(report, resumeFileName) {

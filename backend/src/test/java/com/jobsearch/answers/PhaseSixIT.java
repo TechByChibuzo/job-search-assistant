@@ -110,6 +110,17 @@ class PhaseSixIT {
         Mockito.verify(claude).ask(anyString(), any(), request.capture(), any(), any());
         assertThat(request.getValue()).contains("<earlier_answers>", "Because of the product.", "Tell us about a project");
 
+        // From the extension on a form for a role that isn't saved: the page's title says what the role is
+        Mockito.clearInvocations(claude);
+        mvc.perform(post("/api/answers/draft").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\": \"Why are you interested in Bridge?\", "
+                                + "\"pageUrl\": \"https://job-boards.greenhouse.io/embed/job_app?for=stripe&token=7277110\", "
+                                + "\"pageTitle\": \"Job Application for Software Engineer, Bridge at Stripe\"}"))
+                .andExpect(status().isOk());
+        Mockito.verify(claude).ask(anyString(), any(), request.capture(), any(), any());
+        assertThat(request.getValue())
+                .contains("<application_page_title>Job Application for Software Engineer, Bridge at Stripe</application_page_title>");
+
         mvc.perform(delete("/api/answers/" + id)).andExpect(status().isNoContent());
         mvc.perform(get("/api/answers")).andExpect(jsonPath("$", Matchers.hasSize(0)));
     }

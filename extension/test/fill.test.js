@@ -199,3 +199,23 @@ describe('answers from the bank', () => {
     expect(report.needsYou).toContain('Describe your work authorization status')
   })
 })
+
+describe('putting a drafted answer in the form', () => {
+  it('types it into the matching empty box, outlined in blue', () => {
+    form(`<label for="why">Why are you interested in Bridge?</label><textarea id="why"></textarea>`)
+    expect(globalThis.JSA_FILL.insertAnswer(document, 'Why are you interested in Bridge?', 'Stablecoin rails.')).toBe('inserted')
+    expect(document.getElementById('why').value).toBe('Stablecoin rails.')
+    expect(document.getElementById('why').style.outline).toContain('solid')
+  })
+
+  it('never overwrites what the owner wrote, and never answers a sensitive question', () => {
+    form(`
+      <label for="why">Why us?</label><textarea id="why">My own words</textarea>
+      <label for="auth">Describe your visa sponsorship needs</label><textarea id="auth"></textarea>`)
+    expect(globalThis.JSA_FILL.insertAnswer(document, 'Why us?', 'Draft')).toBe('not-empty')
+    expect(document.getElementById('why').value).toBe('My own words')
+    expect(globalThis.JSA_FILL.insertAnswer(document, 'Describe your visa sponsorship needs', 'Draft')).toBe('not-found')
+    expect(document.getElementById('auth').value).toBe('')
+    expect(globalThis.JSA_FILL.insertAnswer(document, 'A question not on the page', 'Draft')).toBe('not-found')
+  })
+})
