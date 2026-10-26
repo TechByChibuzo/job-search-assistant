@@ -1,41 +1,9 @@
-import { useSyncExternalStore } from 'react'
+import { booleanPreference } from './preferences'
 
-/*
- * Whether the owner needs visa sponsorship, so the inbox hides roles closed to them. It's a standing preference
- * rather than a one-off filter, so it lives in this browser's storage, not the URL, and survives clearing filters.
- */
-const KEY = 'needsSponsorship'
-const listeners = new Set()
-
-function read() {
-  try {
-    return localStorage.getItem(KEY) === 'true'
-  } catch {
-    return false
-  }
-}
-
-function subscribe(listener) {
-  listeners.add(listener)
-  window.addEventListener('storage', listener)
-  return () => {
-    listeners.delete(listener)
-    window.removeEventListener('storage', listener)
-  }
-}
-
-export function useNeedsSponsorship() {
-  return useSyncExternalStore(subscribe, read, () => false)
-}
-
-export function setNeedsSponsorship(on) {
-  try {
-    localStorage.setItem(KEY, String(on))
-  } catch {
-    // Storage blocked: the choice lasts until the page reloads
-  }
-  listeners.forEach((l) => l())
-}
+/** Whether the owner needs visa sponsorship, so the inbox hides roles closed to them. */
+const needsSponsorship = booleanPreference('needsSponsorship')
+export const useNeedsSponsorship = needsSponsorship.use
+export const setNeedsSponsorship = needsSponsorship.set
 
 const RESTRICTIONS = {
   CITIZENS_ONLY: { label: 'Citizens or green card only', excludes: true },

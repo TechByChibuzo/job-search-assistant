@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Search, MapPin, Sparkles, Stamp } from 'lucide-react'
+import { GraduationCap, Search, MapPin, Sparkles, Stamp } from 'lucide-react'
 import { useCompanies } from '../api/hooks'
 import { WORKPLACES } from '../lib/labels'
 import { useDebounced } from '../lib/useDebounced'
@@ -30,7 +30,7 @@ function DebouncedInput({ value, onChange, icon: Icon, className = '', ...props 
   )
 }
 
-export default function Filters({ filters, onChange, needsSponsorship = false, onNeedsSponsorship }) {
+export default function Filters({ filters, onChange, needsSponsorship = false, onNeedsSponsorship, hideSenior = false, onHideSenior }) {
   const companies = useCompanies()
   const set = (patch) => onChange({ ...filters, ...patch })
 
@@ -45,8 +45,8 @@ export default function Filters({ filters, onChange, needsSponsorship = false, o
         icon={Search}
         type="search"
         aria-label="Search titles and teams"
-        placeholder="Search titles and teams"
-        className="w-full sm:w-64"
+        placeholder="Search roles"
+        className="w-full sm:w-52"
         value={filters.q}
         onChange={(q) => set({ q })}
       />
@@ -55,13 +55,13 @@ export default function Filters({ filters, onChange, needsSponsorship = false, o
         type="search"
         aria-label="Location"
         placeholder="City or state"
-        className="w-[calc(50%-0.25rem)] sm:w-40"
+        className="w-[calc(50%-0.25rem)] sm:w-36"
         value={filters.location}
         onChange={(location) => set({ location })}
       />
       <select
         aria-label="Company"
-        className={`${field} w-[calc(50%-0.25rem)] px-3 sm:w-44`}
+        className={`${field} w-[calc(50%-0.25rem)] px-3 sm:w-40`}
         value={filters.companyId ?? ''}
         onChange={(e) => set({ companyId: e.target.value || null })}
       >
@@ -101,19 +101,39 @@ export default function Filters({ filters, onChange, needsSponsorship = false, o
         <Sparkles className="size-4" aria-hidden />
         New only
       </button>
-      {onNeedsSponsorship && (
-        <button
-          type="button"
-          aria-pressed={needsSponsorship}
-          onClick={() => onNeedsSponsorship(!needsSponsorship)}
-          title="Hide roles for U.S. citizens or green card holders only, roles needing a clearance, roles that say they won't sponsor, and companies you've marked as not sponsoring"
-          className={`inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors ${
-            needsSponsorship ? 'border-ink bg-ink text-paper' : 'border-rule bg-surface text-slate hover:text-ink'
-          }`}
-        >
-          <Stamp className="size-4" aria-hidden />
-          Hide no-sponsorship
-        </button>
+      {(onNeedsSponsorship || onHideSenior) && (
+        // Standing preferences, remembered in this browser: they stay on as filters are cleared
+        <div className="flex h-10 items-center rounded-lg border border-rule bg-surface p-1" role="group" aria-label="Hide">
+          <span className="pr-1 pl-2 text-sm text-faint">Hide</span>
+          {onNeedsSponsorship && (
+            <button
+              type="button"
+              aria-pressed={needsSponsorship}
+              onClick={() => onNeedsSponsorship(!needsSponsorship)}
+              title="Hide roles for U.S. citizens or green card holders only, roles needing a clearance, roles that say they won't sponsor, and companies you've marked as not sponsoring"
+              className={`inline-flex h-full items-center gap-1.5 rounded-md px-2.5 text-sm font-medium transition-colors ${
+                needsSponsorship ? 'bg-ink text-paper' : 'text-slate hover:text-ink'
+              }`}
+            >
+              <Stamp className="size-3.5" aria-hidden />
+              No sponsorship
+            </button>
+          )}
+          {onHideSenior && (
+            <button
+              type="button"
+              aria-pressed={hideSenior}
+              onClick={() => onHideSenior(!hideSenior)}
+              title="Hide roles asking for 5 or more years of experience, and senior titles: Principal, Staff, Senior, Lead, Manager, Director"
+              className={`inline-flex h-full items-center gap-1.5 rounded-md px-2.5 text-sm font-medium transition-colors ${
+                hideSenior ? 'bg-ink text-paper' : 'text-slate hover:text-ink'
+              }`}
+            >
+              <GraduationCap className="size-3.5" aria-hidden />
+              5+ years
+            </button>
+          )}
+        </div>
       )}
     </div>
   )

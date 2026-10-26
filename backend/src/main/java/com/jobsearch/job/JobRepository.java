@@ -17,7 +17,15 @@ interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecut
 
     List<Job> findByCompanyId(Long companyId);
 
-    List<Job> findByClosedAtIsNullAndDescriptionIsNotNull();
+    List<Job> findByClosedAtIsNull();
+
+    /** Open roles with no description that haven't been sought one recently, newest first. */
+    @Query("""
+            select j.id from Job j
+            where j.closedAt is null and (j.description is null or j.description = '')
+              and (j.descriptionCheckedAt is null or j.descriptionCheckedAt < :before)
+            order by j.firstSeenAt desc, j.id desc""")
+    List<Long> findUndescribed(Instant before, Limit limit);
 
     @Query("select j from Job j where j.closedAt is null and lower(j.company.name) = lower(:company) and lower(j.title) = lower(:title) order by j.id")
     List<Job> findOpenByCompanyAndTitle(String company, String title);
@@ -57,7 +65,8 @@ interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecut
 
     /**
      * New roles per company: first seen after {@code since}, not part of a first import, still open. With
-     * {@code needsSponsorship}, roles closed to someone who needs a visa don't count (see {@link JobFilter}).
+     * {@code needsSponsorship}, roles closed to someone who needs a visa don't count, and with {@code maxYears} roles
+     * asking for more experience or with a senior title (see {@link JobFilter}).
      */
     @Query("""
             select j.company.id as companyId, j.company.name as companyName, count(j) as newJobs
@@ -66,9 +75,10 @@ interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecut
               and (:needsSponsorship = false
                    or ((j.visaRestriction is null or j.visaRestriction = com.jobsearch.job.VisaRestriction.MAY_BE_RESTRICTED)
                        and j.company.noSponsorship = false))
+              and (:maxYears is null or (j.seniorTitle = false and (j.minYears is null or j.minYears <= :maxYears)))
             group by j.company.id, j.company.name
             order by count(j) desc, j.company.name""")
-    List<NewJobCount> countNewByCompany(Instant since, boolean needsSponsorship);
+    List<NewJobCount> countNewByCompany(Instant since, boolean needsSponsorship, Integer maxYears);
 
     interface NewJobCount {
         Long getCompanyId();

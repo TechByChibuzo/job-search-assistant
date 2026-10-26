@@ -9,6 +9,7 @@ import JobList, { JobListSkeleton } from '../components/JobList'
 import TodayStrip from '../components/TodayStrip'
 import { markSeen } from '../lib/seen'
 import { useKeyboardNav } from '../lib/useKeyboardNav'
+import { MAX_YEARS, setHideSenior, useHideSenior } from '../lib/experience'
 import { setNeedsSponsorship, useNeedsSponsorship } from '../lib/visa'
 import { secondaryButton } from '../lib/ui'
 
@@ -73,7 +74,8 @@ export default function JobsPage() {
   const filters = useMemo(() => readFilters(params), [params])
   const selected = params.get('job') ? Number(params.get('job')) : null
   const needsSponsorship = useNeedsSponsorship()
-  const jobs = useJobs({ ...filters, needsSponsorship })
+  const hideSenior = useHideSenior()
+  const jobs = useJobs({ ...filters, needsSponsorship, maxYears: hideSenior ? MAX_YEARS : undefined })
   const summary = useSummary().data
   const maxAgeDays = summary?.maxAgeDays
   const appliedRoles = summary?.appliedRoles ?? 0
@@ -118,6 +120,8 @@ export default function JobsPage() {
           onChange={setFilters}
           needsSponsorship={needsSponsorship}
           onNeedsSponsorship={setNeedsSponsorship}
+          hideSenior={hideSenior}
+          onHideSenior={setHideSenior}
         />
       </header>
       <AddRoleDialog open={adding} onClose={() => setAdding(false)} onAdded={(id) => select(id)} />
@@ -141,7 +145,7 @@ export default function JobsPage() {
               )}
             </span>
             <span className="flex items-center gap-3">
-              <span className="hidden text-xs text-faint xl:inline">
+              <span className="hidden text-xs whitespace-nowrap text-faint 2xl:inline">
                 <kbd className="font-sans">j</kbd> / <kbd className="font-sans">k</kbd> to move
               </span>
               <select

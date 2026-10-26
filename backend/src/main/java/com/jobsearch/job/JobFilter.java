@@ -23,6 +23,7 @@ import com.jobsearch.job.source.Workplace;
  * @param excludeIds    roles to leave out, such as those the owner has already applied to
  * @param needsSponsorship hide roles closed to someone who needs a visa: citizens only, clearance required or no
  *                      sponsorship, by the posting or because the owner marked the company
+ * @param maxYears      hide roles asking for more years of experience than this, or with a senior title; null shows all
  * @param bestFitFirst  order by match score, highest first, unscored roles last; otherwise newest first
  */
 record JobFilter(
@@ -35,6 +36,7 @@ record JobFilter(
         boolean includeClosed,
         Set<Long> excludeIds,
         boolean needsSponsorship,
+        Integer maxYears,
         boolean bestFitFirst) {
 
     Specification<Job> toSpecification() {
@@ -66,6 +68,10 @@ record JobFilter(
                 where.add(cb.or(cb.isNull(root.get("visaRestriction")),
                         cb.equal(root.get("visaRestriction"), VisaRestriction.MAY_BE_RESTRICTED)));
                 where.add(cb.isFalse(root.get("company").get("noSponsorship")));
+            }
+            if (maxYears != null) {
+                where.add(cb.isFalse(root.get("seniorTitle")));
+                where.add(cb.or(cb.isNull(root.get("minYears")), cb.le(root.get("minYears"), maxYears)));
             }
             if (q != null && !q.isBlank()) {
                 for (String word : q.strip().split("\\s+")) {

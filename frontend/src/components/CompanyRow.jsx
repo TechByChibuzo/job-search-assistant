@@ -127,7 +127,7 @@ function EditPanel({ company, focusLink, onDone }) {
         <span>
           <span className="font-medium">Doesn&rsquo;t sponsor visas</span>
           <span className="block text-faint">
-            Hides all its roles when you turn on &ldquo;Hide no-sponsorship&rdquo; in the inbox, even ones whose posting doesn&rsquo;t
+            Hides all its roles when you turn on Hide &ldquo;No sponsorship&rdquo; in the inbox, even ones whose posting doesn&rsquo;t
             say.
           </span>
         </span>

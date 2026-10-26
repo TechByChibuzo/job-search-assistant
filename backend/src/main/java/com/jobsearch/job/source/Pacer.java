@@ -29,7 +29,7 @@ public class Pacer {
         return maxPages;
     }
 
-    void beforeNextPage() {
+    public void beforeNextPage() {
         if (delay.isZero()) {
             return;
         }

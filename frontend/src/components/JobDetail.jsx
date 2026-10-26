@@ -53,7 +53,7 @@ export default function JobDetail({ id, onClose }) {
   if (isPending) return <DetailSkeleton />
   if (error) return <p className="p-8 text-sm text-danger">{error.message}</p>
 
-  const { summary: job, description, closedAt, visaEvidence } = data
+  const { summary: job, description, closedAt, visaEvidence, yearsEvidence } = data
   const visa = visaNote(job)
   const postingUrl = safeHref(job.url)
   const facts = [
@@ -61,6 +61,15 @@ export default function JobDetail({ id, onClose }) {
     ['Location', job.location],
     ['Workplace', workplaceLabel(job.workplace)],
     ['Posted', job.postedAt && `${formatDate(job.postedAt)} (${timeAgo(job.postedAt)})`],
+    [
+      'Experience',
+      job.minYears != null && (
+        <>
+          {job.minYears}+ {job.minYears === 1 ? 'year' : 'years'} asked for
+          {yearsEvidence && <span className="mt-0.5 block text-xs text-faint">&ldquo;{yearsEvidence}&rdquo;</span>}
+        </>
+      ),
+    ],
     ['First seen', timeAgo(job.firstSeenAt)],
     ['Closed', closedAt && formatDate(closedAt)],
   ].filter(([, v]) => v)

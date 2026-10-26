@@ -71,13 +71,14 @@ class JobController {
             @RequestParam(defaultValue = "false") boolean includeOlder,
             @RequestParam(defaultValue = "false") boolean needsSponsorship,
             @RequestParam(defaultValue = "false") boolean includeApplied,
+            @RequestParam(required = false) @Min(0) Integer maxYears,
             @RequestParam(defaultValue = "newest") String sort,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "50") @Min(1) @Max(200) int size) {
         Instant newSince = newSince();
         Instant postedSince = includeOlder ? null : clock.instant().minus(properties.jobs().maxAge());
         var filter = new JobFilter(q, companyId, workplace, location, newOnly ? newSince : null, postedSince, includeClosed,
-                includeApplied ? null : tracked.pastTheInbox(), needsSponsorship, "fit".equalsIgnoreCase(sort));
+                includeApplied ? null : tracked.pastTheInbox(), needsSponsorship, maxYears, "fit".equalsIgnoreCase(sort));
         var results = jobs.findAll(filter.toSpecification(), PageRequest.of(page, size));
         var stages = tracked.stages(results.map(Job::getId).toList());
         return PageResponse.of(results, job -> JobSummary.of(job, newSince, stages.get(job.getId())));
@@ -85,9 +86,10 @@ class JobController {
 
     @GetMapping("/summary")
     @Transactional(readOnly = true)
-    Summary summary(@RequestParam(defaultValue = "false") boolean needsSponsorship) {
+    Summary summary(@RequestParam(defaultValue = "false") boolean needsSponsorship,
+            @RequestParam(required = false) @Min(0) Integer maxYears) {
         Instant since = newSince();
-        var byCompany = jobs.countNewByCompany(since, needsSponsorship).stream()
+        var byCompany = jobs.countNewByCompany(since, needsSponsorship, maxYears).stream()
                 .map(c -> new CompanyNew(c.getCompanyId(), c.getCompanyName(), c.getNewJobs()))
                 .toList();
         var rules = properties.jobs();

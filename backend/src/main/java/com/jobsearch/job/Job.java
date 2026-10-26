@@ -89,6 +89,13 @@ public class Job {
     /** The sentence the restriction was read from. */
     private String visaEvidence;
 
+    /** See ExperienceCheck. */
+    private Integer minYears;
+
+    private String yearsEvidence;
+
+    private boolean seniorTitle;
+
     /** When a description was last sought for a role whose feed left it out (see JobDescriptions). */
     private Instant descriptionCheckedAt;
 
@@ -122,7 +129,7 @@ public class Job {
         if (fetched.description() != null && !fetched.description().isBlank() || descriptionCheckedAt == null) {
             this.description = fetched.description();
         }
-        checkVisa();
+        readPosting();
         this.lastSeenAt = now;
         this.closedAt = null;
     }
@@ -131,7 +138,7 @@ public class Job {
     void recordDescription(String text, Instant at) {
         if (text != null && !text.isBlank() && (description == null || description.isBlank())) {
             this.description = text.strip();
-            checkVisa();
+            readPosting();
         }
         this.descriptionCheckedAt = at;
     }
@@ -140,11 +147,32 @@ public class Job {
         return descriptionCheckedAt;
     }
 
-    /** Reads the description for visa and legal status restrictions; rerun when the rules improve. */
-    void checkVisa() {
-        VisaCheck.Result result = VisaCheck.check(description);
-        this.visaRestriction = result.restriction();
-        this.visaEvidence = result.evidence();
+    /**
+     * Reads the title and description for visa restrictions and for seniority (years asked for, a senior title);
+     * rerun when the rules improve.
+     */
+    void readPosting() {
+        VisaCheck.Result visa = VisaCheck.check(description);
+        this.visaRestriction = visa.restriction();
+        this.visaEvidence = visa.evidence();
+        ExperienceCheck.Result experience = ExperienceCheck.check(title, description);
+        this.minYears = experience.minYears();
+        this.yearsEvidence = experience.evidence();
+        this.seniorTitle = experience.seniorTitle();
+    }
+
+    /** The fewest years of experience the posting asks for; null when it doesn't say. */
+    public Integer getMinYears() {
+        return minYears;
+    }
+
+    public String getYearsEvidence() {
+        return yearsEvidence;
+    }
+
+    /** The title says senior: Principal, Staff, Senior, Lead, Manager… */
+    public boolean isSeniorTitle() {
+        return seniorTitle;
     }
 
     public VisaRestriction getVisaRestriction() {

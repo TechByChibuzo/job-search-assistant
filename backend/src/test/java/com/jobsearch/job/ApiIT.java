@@ -367,6 +367,30 @@ class ApiIT {
     }
 
     @Test
+    void anEarlyCareerSearchHidesSeniorTitlesAndRolesAskingForMoreYears() throws Exception {
+        long id = createCompany("https://boards.greenhouse.io/acme");
+        Instant posted = Instant.now().minus(Duration.ofHours(2));
+        feed.returns(
+                new FetchedJob("1", "Principal Engineer", null, null, Workplace.UNKNOWN, null, posted, "https://example.com/jobs/1", "Lead us."),
+                new FetchedJob("2", "Software Engineer", null, null, Workplace.UNKNOWN, null, posted, "https://example.com/jobs/2",
+                        "Basic qualifications - 8+ years of non-internship professional software development experience"),
+                new FetchedJob("3", "Software Engineer II", null, null, Workplace.UNKNOWN, null, posted, "https://example.com/jobs/3",
+                        "• 2 years of experience with software development."),
+                job("4", "Backend Engineer", null, null, Workplace.UNKNOWN));
+        syncCompany(id);
+
+        mvc.perform(get("/api/jobs")).andExpect(jsonPath("$.totalElements").value(4));
+        mvc.perform(get("/api/jobs").param("maxYears", "4"))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[?(@.title == 'Software Engineer II')].minYears").value(2));
+        mvc.perform(get("/api/jobs/summary").param("maxYears", "4")).andExpect(jsonPath("$.newJobs").value(2));
+        long eightYears = jobs.findByCompanyId(id).stream().filter(j -> j.getExternalId().equals("2")).findFirst().orElseThrow().getId();
+        mvc.perform(get("/api/jobs/" + eightYears))
+                .andExpect(jsonPath("$.summary.minYears").value(8))
+                .andExpect(jsonPath("$.yearsEvidence").value("Basic qualifications - 8+ years of non-internship professional software development experience"));
+    }
+
+    @Test
     void unknownIdsAnswer404AsProblemDetails() throws Exception {
         mvc.perform(get("/api/jobs/999999"))
                 .andExpect(status().isNotFound())
@@ -406,7 +430,8 @@ class ApiIT {
         org.assertj.core.api.Assertions.assertThat(progress).contains("\"current\":\"Acme\"");
 
         release.countDown();
-        awaitSync().andExpect(jsonPath("$.done").value(1)).andExpect(jsonPath("$.finishedAt").exists());
+        // The company, then the steps that always run after a full sync (role descriptions)
+        awaitSync().andExpect(jsonPath("$.done").value(2)).andExpect(jsonPath("$.finishedAt").exists());
     }
 
     @Test

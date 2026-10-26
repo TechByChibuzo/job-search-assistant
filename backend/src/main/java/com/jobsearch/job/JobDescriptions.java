@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -23,6 +24,7 @@ import com.jobsearch.job.source.BoardNotFoundException;
 import com.jobsearch.job.source.FetchQuery;
 import com.jobsearch.job.source.FetchedJob;
 import com.jobsearch.job.source.JobSources;
+import com.jobsearch.job.source.Pacer;
 
 /**
  * Finds the description of a role whose feed left it out, once, when it's needed: when the owner opens the
@@ -60,14 +62,36 @@ public class JobDescriptions {
         this.clock = clock;
     }
 
-    /** Fetches and stores the role's description if it has none and none was sought in the last day. */
-    public void ensure(long jobId) {
+    /**
+     * Fetches descriptions for open roles that have none, newest first, up to {@code limit}, pausing between
+     * requests like a sync does. Run after the daily sync, so the inbox's filters can read them.
+     *
+     * @return how many were found
+     */
+    public int describeMissing(int limit, Pacer pacer) {
+        int found = 0;
+        List<Long> ids = jobs.findUndescribed(clock.instant().minus(RETRY_AFTER), Limit.of(limit));
+        for (int i = 0; i < ids.size(); i++) {
+            if (i > 0) {
+                pacer.beforeNextPage();
+            }
+            found += ensure(ids.get(i)) ? 1 : 0;
+        }
+        return found;
+    }
+
+    /**
+     * Fetches and stores the role's description if it has none and none was sought in the last day.
+     *
+     * @return whether a description was found now
+     */
+    public boolean ensure(long jobId) {
         Instant now = clock.instant();
         Role role = tx.execute(s -> jobs.findWithCompanyById(jobId).map(j -> new Role(j.getTitle(), j.getCompany().getName(),
                 j.getCompany().getAts(), j.getCompany().getBoard(), j.getExternalId(), j.getUrl(),
                 j.getDescription() != null && !j.getDescription().isBlank(), j.getDescriptionCheckedAt())).orElse(null));
         if (role == null || role.described() || (role.checkedAt() != null && role.checkedAt().isAfter(now.minus(RETRY_AFTER)))) {
-            return;
+            return false;
         }
         // No transaction is held while other sites answer
         String found = null;
@@ -81,6 +105,7 @@ public class JobDescriptions {
         }
         String description = found;
         tx.executeWithoutResult(s -> jobs.findById(jobId).ifPresent(j -> j.recordDescription(description, now)));
+        return description != null;
     }
 
     /** The same role, by title, on a public board the company has under its own name. */

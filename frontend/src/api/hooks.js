@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { MAX_YEARS, useHideSenior } from '../lib/experience'
 import { useNeedsSponsorship } from '../lib/visa'
 import { api, toQuery } from './client'
 
@@ -41,10 +42,14 @@ export function useJobDescription(id, needed) {
   })
 }
 
-/** The inbox header's counts, leaving out roles closed to the owner when they need sponsorship. */
+/** The inbox header's counts, leaving out roles the owner's standing filters hide (sponsorship, seniority). */
 export function useSummary() {
   const needsSponsorship = useNeedsSponsorship()
-  return useQuery({ queryKey: ['summary', needsSponsorship], queryFn: () => api(`/jobs/summary${toQuery({ needsSponsorship })}`) })
+  const maxYears = useHideSenior() ? MAX_YEARS : undefined
+  return useQuery({
+    queryKey: ['summary', needsSponsorship, maxYears],
+    queryFn: () => api(`/jobs/summary${toQuery({ needsSponsorship, maxYears })}`),
+  })
 }
 
 export function useCompanies() {

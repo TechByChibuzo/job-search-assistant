@@ -33,7 +33,9 @@ final class JobDtos {
             String matchSummary,
             VisaRestriction visaRestriction,
             boolean companyNoSponsorship,
-            String trackedStage) {
+            String trackedStage,
+            Integer minYears,
+            boolean seniorTitle) {
 
         static JobSummary of(Job job, Instant newSince) {
             return of(job, newSince, null);
@@ -60,7 +62,9 @@ final class JobDtos {
                     job.getMatchSummary(),
                     job.getVisaRestriction(),
                     job.getCompany().isNoSponsorship(),
-                    trackedStage);
+                    trackedStage,
+                    job.getMinYears(),
+                    job.isSeniorTitle());
         }
     }
 
@@ -98,11 +102,13 @@ final class JobDtos {
             List<String> matchStrengths,
             List<String> matchGaps,
             Instant matchedAt,
-            String visaEvidence) {
+            String visaEvidence,
+            String yearsEvidence) {
 
         static JobDetail of(Job job, Instant newSince) {
             return new JobDetail(JobSummary.of(job, newSince), job.getDescription(), job.getLastSeenAt(), job.getClosedAt(),
-                    job.getMatchStrengths(), job.getMatchGaps(), job.getMatchedAt(), job.getVisaEvidence());
+                    job.getMatchStrengths(), job.getMatchGaps(), job.getMatchedAt(), job.getVisaEvidence(),
+                    job.getYearsEvidence());
         }
     }
 }
