@@ -1,5 +1,5 @@
 import { api, baseUrl, resumeFile } from './lib/api.js'
-import { classify, embeddedForm, knownSystem } from './lib/pages.js'
+import { classify, embeddedForm, knownSystem, roleFromTitle } from './lib/pages.js'
 
 const view = document.getElementById('view')
 
@@ -174,6 +174,10 @@ async function fillView(tab) {
   // so an unfamiliar page can't collect the resume through a hidden upload
   const attach = h('input', { type: 'checkbox', checked: Boolean(system) })
   const attachLabel = h('label', { class: 'checkbox' }, attach, ` Attach my resume (${profile.resumeFileName ?? 'none in the app'})`)
+  // Saved equal-opportunity answers are personal: given to known hiring systems, elsewhere only when ticked
+  const eeoSaved = ['eeoGender', 'eeoHispanicLatino', 'eeoVeteran'].some((k) => profile.fields[k])
+  const eeo = h('input', { type: 'checkbox', checked: Boolean(system) })
+  const eeoLabel = eeoSaved ? h('label', { class: 'checkbox' }, eeo, ' Answer equal-opportunity questions with my saved answers') : null
 
   fillButton.addEventListener('click', async () => {
     fillButton.disabled = true
@@ -181,8 +185,11 @@ async function fillView(tab) {
     try {
       const resume = attach.checked ? await resumeFile() : null
       const { questions, answers } = await savedAnswers(tab)
+      const fields = eeo.checked
+        ? profile.fields
+        : { ...profile.fields, eeoGender: null, eeoHispanicLatino: null, eeoVeteran: null }
       const report = await inPage(tab.id, 'content/fill.js', (p, r, a) => globalThis.JSA_FILL.fill(document, p, r, a), [
-        profile.fields,
+        fields,
         resume,
         answers,
       ])
@@ -213,6 +220,7 @@ async function fillView(tab) {
     ),
     system ? null : h('p', { class: 'faint' }, `${new URL(tab.url).hostname} isn’t a hiring system the app knows; check it’s the real employer before attaching your resume.`),
     attachLabel,
+    eeoLabel,
     fillButton,
     result,
   )
@@ -341,12 +349,24 @@ function reportView(report, resumeFileName) {
 
 /** After the owner submits, one click logs the application in the tracker. */
 function recordForm(tab, report, resumeFileName) {
-  const title = h('input', { value: report.pageTitle?.split(/[|–-]/)[0]?.trim() ?? '' })
-  const company = h('input', { value: '' })
-  const extra = h('div', { hidden: true }, h('p', { class: 'faint' }, 'This page isn’t a role the app knows. Name it:'), field('Title', title), field('Company', company))
+  const guess = roleFromTitle(report.pageTitle)
+  const title = h('input', { value: guess.title })
+  const company = h('input', { value: guess.company })
+  const extra = h(
+    'div',
+    { hidden: true },
+    note('info', 'Which role is this? Check the title and company, then press the button again. If it’s already in your inbox, it’s recorded there.'),
+    field('Title', title),
+    field('Company', company),
+  )
   const record = h('button', { class: 'secondary' }, 'I submitted it: record the application')
   const status = h('div')
   record.addEventListener('click', async () => {
+    if (!extra.hidden && (!title.value.trim() || !company.value.trim())) {
+      status.replaceChildren(note('info', 'Add the role’s title and company first.'))
+      ;(title.value.trim() ? company : title).focus()
+      return
+    }
     record.disabled = true
     try {
       const pursuit = await api('/applications', {

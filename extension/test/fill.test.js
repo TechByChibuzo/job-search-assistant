@@ -342,6 +342,17 @@ describe('equal-opportunity answers the owner saved', () => {
     expect(report.needsYou).not.toContain('Gender')
   })
 
+  it('never chooses a radio button the owner cannot see', async () => {
+    const report = await form(
+      `<fieldset><legend>Veteran status</legend>
+        <label data-rect="0,0,0,0" style="display:none"><input type="radio" name="vet" value="n" data-rect="0,0,0,0"> I am not a protected veteran</label>
+        <label><input type="radio" name="vet" value="y"> I identify as a protected veteran</label></fieldset>`,
+      saved,
+    )
+    expect([...document.querySelectorAll('input[name=vet]')].some((r) => r.checked)).toBe(false)
+    expect(report.needsYou).toContain('Veteran status')
+  })
+
   it('picks them in search dropdowns, and leaves unsaved ones for the owner', async () => {
     document.body.innerHTML = ''
     pickList('gender', 'Gender', (q) => ['Male', 'Female', 'Decline To Self Identify'].filter((o) => o.toLowerCase().includes(q.toLowerCase())))

@@ -374,7 +374,10 @@
 
   /** Clicks the matching radio button of the group a radio belongs to. */
   function chooseRadio(doc, el, { score }) {
-    const group = el.name ? [...doc.querySelectorAll(`input[type="radio"][name="${CSS.escape(el.name)}"]`)] : [el]
+    // Only a choice the owner can see: a styled radio is often hidden behind its visible label
+    const group = (el.name ? [...doc.querySelectorAll(`input[type="radio"][name="${CSS.escape(el.name)}"]`)] : [el]).filter(
+      (r) => visible(r) || (r.closest('label') && visible(r.closest('label'))) || (r.id && doc.querySelector(`label[for="${CSS.escape(r.id)}"]`) && visible(doc.querySelector(`label[for="${CSS.escape(r.id)}"]`))),
+    )
     const radio = group.find((r) => score(norm(labelText(doc, r) || r.value)) > 0)
     if (!radio) return false
     radio.click()
