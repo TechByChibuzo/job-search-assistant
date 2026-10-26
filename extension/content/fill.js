@@ -24,6 +24,8 @@
     ['school', /school|university|college|institution/i],
     ['degree', /\bdegree\b/i],
     ['graduationYear', /graduat/i],
+    // "What city and state do you live in?" wants both, so it comes before city alone
+    ['location', /\bcity\b,?\s*(and|&|\/|or)?\s*\bstate\b/i],
     ['city', /\bcity\b|\btown\b/i],
     ['state', /\bstate\b(?!ment)|province/i],
     ['country', /\bcountry\b/i],
@@ -102,7 +104,8 @@
       const heading = field.querySelector('label, legend, [class*="label"], [data-automation-id*="label"]')
       if (heading) parts.push(heading.textContent)
     }
-    return clean(parts.join(' '))
+    // A field can point at the same label twice (a <label for> and aria-labelledby); say it once
+    return clean([...new Set(parts.map(clean))].join(' '))
   }
 
   /** "addressSection_city" → "address Section city", so machine names match by word too. */
@@ -217,6 +220,7 @@
     const filled = []
     const answered = []
     const needsYou = []
+    const toChoose = []
     const seenQuestions = new Set()
 
     for (const el of doc.querySelectorAll('input, textarea, select')) {
@@ -232,6 +236,12 @@
         if (!seenQuestions.has(question)) needsYou.push(question || 'A question')
         seenQuestions.add(question)
         mark(el, '#d97706')
+        continue
+      }
+      // A search-and-pick list (country, city, school) only takes a choice from its own list: typing into it
+      // selects nothing, so it's left for the owner and named
+      if (el.getAttribute('role') === 'combobox' || el.getAttribute('aria-autocomplete') === 'list') {
+        if (!el.value && label && !toChoose.includes(label)) toChoose.push(label)
         continue
       }
       // A long answer is filled only from the answer bank, outlined in blue for the owner to read
@@ -254,8 +264,13 @@
       filled.push(label || key)
     }
 
-    return { filled, answered, needsYou, resume: attachResume(doc, resume), pageTitle: doc.title }
+    return { filled, answered, needsYou, toChoose, resume: attachResume(doc, resume), pageTitle: doc.title }
   }
 
-  globalThis.JSA_FILL = { fill, questions, keyFor, describe, SENSITIVE }
+  /** Addresses of the frames on the page, to spot a hiring system's form embedded from another site. */
+  function frames(doc) {
+    return [...doc.querySelectorAll('iframe')].map((f) => f.src).filter((src) => /^https:/i.test(src))
+  }
+
+  globalThis.JSA_FILL = { fill, questions, frames, keyFor, describe, SENSITIVE }
 })()

@@ -1,5 +1,5 @@
 import { api, baseUrl, resumeFile } from './lib/api.js'
-import { classify, knownSystem } from './lib/pages.js'
+import { classify, embeddedForm, knownSystem } from './lib/pages.js'
 
 const view = document.getElementById('view')
 
@@ -152,6 +152,24 @@ async function fillView(tab) {
     return
   }
 
+  // A form embedded from a hiring system can't be read from this page; offer to open it on its own
+  const embedded = embeddedForm(await inPage(tab.id, 'content/fill.js', () => globalThis.JSA_FILL.frames(document)))
+  if (embedded) {
+    const open = h('button', {}, 'Open the form on its own')
+    open.addEventListener('click', () => chrome.tabs.update(tab.id, { url: embedded.url }).then(() => window.close()))
+    show(
+      h('h1', {}, 'Fill this application'),
+      note(
+        'info',
+        `This page shows a ${embedded.system} form from another site, which the extension can't read here. `,
+        'Open the form on its own, then click the extension again to fill it.',
+      ),
+      open,
+      h('p', { class: 'faint' }, 'Same form, same application: it just opens without the company page around it.'),
+    )
+    return
+  }
+
   // On a hiring system the app knows, attach the resume; anywhere else, only if the owner ticks the box,
   // so an unfamiliar page can't collect the resume through a hidden upload
   const attach = h('input', { type: 'checkbox', checked: Boolean(system) })
@@ -225,6 +243,11 @@ function reportView(report, resumeFileName) {
         h('strong', {}, 'From your answer bank (outlined in blue), read before you submit:'),
         h('ul', {}, report.answered.map((a) => h('li', {}, a.question))),
       ),
+    )
+  }
+  if (report.toChoose?.length) {
+    nodes.push(
+      note('info', h('strong', {}, 'Pick these from their lists:'), h('ul', {}, report.toChoose.slice(0, 8).map((q) => h('li', {}, q)))),
     )
   }
   if (report.needsYou.length) {

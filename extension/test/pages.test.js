@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classify, knownSystem } from '../lib/pages.js'
+import { classify, embeddedForm, knownSystem } from '../lib/pages.js'
 
 describe('classify', () => {
   it('tells profiles, jobs and applications apart', () => {
@@ -24,5 +24,18 @@ describe('classify', () => {
     expect(knownSystem('https://notlever.co/apply')).toBeNull()
     expect(knownSystem('http://boards.greenhouse.io/airbnb/jobs/1')).toBeNull()
     expect(knownSystem('https://boards.greenhouse.io/airbnb/jobs/1')).toBe('Greenhouse')
+  })
+})
+
+describe('embeddedForm', () => {
+  it('finds a hiring system form embedded in a company page', () => {
+    expect(
+      embeddedForm(['https://www.youtube.com/embed/x', 'https://job-boards.greenhouse.io/embed/job_app?for=stripe&token=7277110']),
+    ).toEqual({ system: 'Greenhouse', url: 'https://job-boards.greenhouse.io/embed/job_app?for=stripe&token=7277110' })
+  })
+
+  it('ignores other frames and lookalike hosts', () => {
+    expect(embeddedForm(['https://greenhouse.io.evil.example/embed', 'http://boards.greenhouse.io/x'])).toBeNull()
+    expect(embeddedForm([])).toBeNull()
   })
 })

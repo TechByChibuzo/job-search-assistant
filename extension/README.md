@@ -12,7 +12,9 @@ What it never does:
 - It never navigates, scrolls, clicks or sends anything on LinkedIn.
 - It only fills fields you can see, and on sites other than Greenhouse, Lever, Ashby and Workday it attaches your resume only if you tick the box.
 - It never answers work authorization, sponsorship, EEO, consent or similar questions; those are outlined in amber for you.
-- It never ticks a box, picks an option, or presses submit.
+- It never ticks a box, picks an option, or presses submit. Search-and-pick lists (country, city, school) are listed for you to choose.
+
+Some companies, such as Stripe, show a Greenhouse or Lever form inside their own careers page. The extension can only read the page you click it on, not a form framed in from another site, so it offers to open the form on its own; click the extension again there.
 - It only talks to your own app on `localhost`.
 
 ## Install
