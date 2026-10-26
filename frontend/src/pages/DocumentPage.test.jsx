@@ -121,6 +121,29 @@ describe('DocumentPage', () => {
     expect(sent.flagged).toBe(0)
   })
 
+  it('shows what tailoring changed against the resume, and prints without the marks', async () => {
+    const tailored = structuredClone(resume)
+    const entry = tailored.content.sections[0].entries[0]
+    entry.bullets[0].source = 'Built the billing API.'
+    entry.leftOut = ['Organised the team offsite.']
+    tailored.content.leftOutEntries = ['Barista']
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => json(tailored))
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {})
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Show changes' }))
+    expect(screen.getByText(/2 bullets reworded, 0 kept as written, 1 left out/)).toBeInTheDocument()
+    expect(screen.getByText(/Entries left out: Barista/)).toBeInTheDocument()
+    expect(screen.getAllByText('API in Java.', { selector: 'ins' })[0]).toBeInTheDocument()
+    expect(screen.getByText('API.', { selector: 'del' })).toBeInTheDocument()
+    expect(screen.getByText('Organised the team offsite.', { selector: 'del' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Print or save as PDF/ }))
+    expect(print).toHaveBeenCalled()
+    expect(screen.queryByText('Organised the team offsite.')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show changes' })).toBeInTheDocument()
+  })
+
   it('edits the text and saves it', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch').mockImplementation((url, init) => {
       if (init?.method === 'PATCH') return json({ ...resume, content: JSON.parse(init.body).content })

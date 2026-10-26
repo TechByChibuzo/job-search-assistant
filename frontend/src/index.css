@@ -285,6 +285,27 @@ body {
   line-height: 1.45;
 }
 
+/* The changes view on a tailored resume: fixed colours, since the paper is white in both themes */
+.diff-add {
+  border-radius: 2px;
+  background: #d9f2e1;
+  color: #0b5a2c;
+  text-decoration: none;
+}
+.diff-del {
+  color: #a1281c;
+  text-decoration: line-through;
+  text-decoration-color: rgb(161 40 28 / 0.6);
+}
+.diff-left-out {
+  opacity: 0.85;
+}
+.diff-note {
+  font-family: var(--font-sans, system-ui), sans-serif;
+  font-size: 8pt;
+  color: #6b7280;
+}
+
 /* Tailored documents print as a clean page: white, no app around them, no toasts */
 @media print {
   @page {

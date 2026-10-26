@@ -49,6 +49,8 @@ public class TailorService {
             - Mark key terms in bold with **double asterisks**, as the resume does: technologies and results, a \
             few per bullet.
             - "source" is the exact resume bullet it is based on, copied word for word. The app checks it.
+            - "leftOut" lists the entry's resume bullets you didn't use, word for word, and "leftOutEntries" \
+            the titles of entries you left out, so the candidate can see what changed.
 
             It must fit on one page: never more bullets than the original.
 
@@ -76,6 +78,7 @@ public class TailorService {
     static final Map<String, Object> RESUME_SCHEMA = AnthropicClaude.object(Map.of(
             "name", STRING,
             "contact", STRINGS,
+            "leftOutEntries", STRINGS,
             "sections", Map.of("type", "array", "items", AnthropicClaude.object(Map.of(
                     "heading", STRING,
                     "entries", Map.of("type", "array", "items", AnthropicClaude.object(Map.of(
@@ -84,6 +87,7 @@ public class TailorService {
                             "titleRight", STRING,
                             "subtitle", STRING,
                             "subtitleRight", STRING,
+                            "leftOut", STRINGS,
                             "bullets", Map.of("type", "array", "items", AnthropicClaude.object(Map.of(
                                     "text", STRING,
                                     "source", STRING)))))),
@@ -160,6 +164,14 @@ public class TailorService {
                         .map(text -> "\"" + text + "\" isn't written this way in your resume")
                         .toList();
                 ((ObjectNode) entry).set("problems", json.valueToTree(changed));
+                // Shown struck through in the changes view, so only lines really in the resume are kept
+                ArrayNode leftOut = json.createArrayNode();
+                entry.path("leftOut").forEach(line -> {
+                    if (!check.available() || check.quoteFound(line.asText())) {
+                        leftOut.add(line);
+                    }
+                });
+                ((ObjectNode) entry).set("leftOut", leftOut);
                 flagged += changed.isEmpty() ? 0 : 1;
                 for (JsonNode bullet : entry.path("bullets")) {
                     // Bold marks are layout, not words: check the plain text
@@ -183,6 +195,13 @@ public class TailorService {
             }
         }
         doc.set("droppedSkills", json.valueToTree(unknownSkills));
+        ArrayNode leftOutEntries = json.createArrayNode();
+        doc.path("leftOutEntries").forEach(title -> {
+            if (check.mentions(title.asText())) {
+                leftOutEntries.add(title);
+            }
+        });
+        doc.set("leftOutEntries", leftOutEntries);
         doc.put("flagged", flagged);
         doc.put("checked", check.available());
         return doc;

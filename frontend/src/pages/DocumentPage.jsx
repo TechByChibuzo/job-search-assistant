@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { flushSync } from 'react-dom'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AlertTriangle, ArrowLeft, Pencil, Printer, Trash2, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, GitCompare, Pencil, Printer, Trash2, X } from 'lucide-react'
 import { useDeleteDocument, useDocument, useEditDocument } from '../api/hooks'
 import { useToast } from '../components/Toasts'
 import { formatDate } from '../lib/dates'
+import { diffWords, plain } from '../lib/diff'
 import { primaryButton, secondaryButton } from '../lib/ui'
 import 'computer-modern/cmu-serif.css'
 
@@ -76,7 +78,32 @@ function normalize(doc) {
 }
 
 /** Jake's resume template, the owner's layout: what LaTeX sets, in CSS (see .jake in index.css). */
-function Resume({ doc, editing, update }) {
+/** A bullet against the resume line it came from: added words highlighted, removed ones struck through. */
+function Changed({ before, after }) {
+  return diffWords(plain(before), plain(after)).map((op, i) => (
+    <span key={i}>
+      {i > 0 && ' '}
+      {op.type === 'add' ? (
+        <ins className="diff-add">{op.text}</ins>
+      ) : op.type === 'del' ? (
+        <del className="diff-del">{op.text}</del>
+      ) : (
+        op.text
+      )}
+    </span>
+  ))
+}
+
+/** How much the tailoring changed, for the summary above the page. */
+function changeCounts(doc) {
+  const bullets = (doc.sections ?? []).flatMap((s) => (s.entries ?? []).flatMap((e) => e.bullets ?? []))
+  const withSource = bullets.filter((b) => b.source)
+  const reworded = withSource.filter((b) => plain(b.source).trim() !== plain(b.text).trim()).length
+  const leftOut = (doc.sections ?? []).flatMap((s) => (s.entries ?? []).flatMap((e) => e.leftOut ?? [])).length
+  return { reworded, unchanged: withSource.length - reworded, leftOut, leftOutEntries: doc.leftOutEntries ?? [] }
+}
+
+function Resume({ doc, editing, changes, update }) {
   const c = normalize(doc)
   return (
     <div className="jake">
@@ -119,7 +146,7 @@ function Resume({ doc, editing, update }) {
                 </div>
               )}
               <Problems problems={entry.problems} />
-              {entry.bullets?.length > 0 && (
+              {(entry.bullets?.length > 0 || (changes && entry.leftOut?.length > 0)) && (
                 <ul>
                   {entry.bullets.map((b, bi) => (
                     <li key={bi} className={b.problems?.length ? FLAGGED : undefined}>
@@ -129,6 +156,8 @@ function Resume({ doc, editing, update }) {
                           value={b.text}
                           onChange={(v) => update((d) => (d.sections[si].entries[ei].bullets[bi].text = v))}
                         />
+                      ) : changes && b.source ? (
+                        <Changed before={b.source} after={b.text} />
                       ) : (
                         <Rich text={b.text} />
                       )}
@@ -146,6 +175,12 @@ function Resume({ doc, editing, update }) {
                       </Problems>
                     </li>
                   ))}
+                  {changes &&
+                    entry.leftOut?.map((line, li) => (
+                      <li key={`out-${li}`} className="diff-left-out">
+                        <del className="diff-del">{line}</del> <span className="diff-note">left out</span>
+                      </li>
+                    ))}
                 </ul>
               )}
             </div>
@@ -185,6 +220,27 @@ function Letter({ doc, editing, update }) {
   )
 }
 
+function ChangesSummary({ doc }) {
+  const c = changeCounts(doc)
+  const parts = [
+    `${c.reworded} ${c.reworded === 1 ? 'bullet' : 'bullets'} reworded`,
+    `${c.unchanged} kept as written`,
+    c.leftOut > 0 && `${c.leftOut} left out`,
+  ].filter(Boolean)
+  return (
+    <div className="mt-3 rounded-lg border border-rule bg-surface px-4 py-3 text-sm">
+      <p>
+        <span className="font-medium">Compared with your resume:</span> {parts.join(', ')}.
+        {c.leftOutEntries.length > 0 && <> Entries left out: {c.leftOutEntries.join(', ')}.</>}
+      </p>
+      <p className="mt-1 text-slate">
+        <ins className="diff-add">Added words</ins> are highlighted and <del className="diff-del">removed words</del> struck
+        through. This view doesn&rsquo;t print.
+      </p>
+    </div>
+  )
+}
+
 export default function DocumentPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -193,6 +249,7 @@ export default function DocumentPage() {
   const edit = useEditDocument()
   const remove = useDeleteDocument()
   const [editing, setEditing] = useState(false)
+  const [changes, setChanges] = useState(false)
   const [draft, setDraft] = useState(null)
 
   if (query.isPending) return <div className="skeleton mt-10 h-[60vh] w-full max-w-3xl" />
@@ -248,11 +305,25 @@ export default function DocumentPage() {
             </>
           ) : (
             <>
-              <button type="button" onClick={() => setEditing(true)} className={secondaryButton}>
+              {d.kind === 'RESUME' && (
+                <button type="button" aria-pressed={changes} onClick={() => setChanges((v) => !v)} className={secondaryButton}>
+                  <GitCompare className="size-4" aria-hidden />
+                  {changes ? 'Hide changes' : 'Show changes'}
+                </button>
+              )}
+              <button type="button" onClick={() => (setChanges(false), setEditing(true))} className={secondaryButton}>
                 <Pencil className="size-4" aria-hidden />
                 Edit
               </button>
-              <button type="button" onClick={() => window.print()} className={primaryButton}>
+              <button
+                type="button"
+                onClick={() => {
+                  // The changes view is for reading; the page always prints as the finished resume
+                  flushSync(() => setChanges(false))
+                  window.print()
+                }}
+                className={primaryButton}
+              >
                 <Printer className="size-4" aria-hidden />
                 Print or save as PDF
               </button>
@@ -288,6 +359,7 @@ export default function DocumentPage() {
             Left out of skills because your resume doesn&rsquo;t name them: {content.droppedSkills.join(', ')}.
           </p>
         )}
+        {changes && <ChangesSummary doc={content} />}
         {content.droppedContact?.length > 0 && (
           <p className="mt-2 rounded-lg bg-warn-wash px-4 py-3 text-sm text-warn">
             Removed from your contact line because your resume doesn&rsquo;t have them: {content.droppedContact.join(', ')}.
@@ -302,7 +374,7 @@ export default function DocumentPage() {
 
       <article className="mx-auto mt-6 max-w-[8.5in] bg-white px-5 py-7 text-black sm:px-[0.5in] sm:py-[0.5in] shadow-card ring-1 ring-rule print:mt-0 print:max-w-none print:p-0 print:shadow-none print:ring-0">
         {d.kind === 'RESUME' ? (
-          <Resume doc={content} editing={editing} update={update} />
+          <Resume doc={content} editing={editing} changes={changes} update={update} />
         ) : (
           <Letter doc={content} editing={editing} update={update} />
         )}

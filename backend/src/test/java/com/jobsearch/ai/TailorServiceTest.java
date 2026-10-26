@@ -53,6 +53,19 @@ class TailorServiceTest {
     }
 
     @Test
+    void keepsOnlyLeftOutLinesThatAreReallyInTheResume() throws Exception {
+        JsonNode answer = json.readTree("""
+                {"name": "Jane Doe", "contact": [], "leftOutEntries": [], "sections": [{"heading": "Experience", "skillGroups": [],
+                  "entries": [{"title": "Software Engineer", "detail": "", "titleRight": "", "subtitle": "", "subtitleRight": "",
+                    "bullets": [], "leftOut": ["Cut query latency by 40% with indexes.", "Won a hackathon"]}]}]}""");
+
+        JsonNode doc = service.checkResume(answer, check);
+
+        assertThat(doc.path("sections").get(0).path("entries").get(0).path("leftOut").toString())
+                .isEqualTo("[\"Cut query latency by 40% with indexes.\"]");
+    }
+
+    @Test
     void dropsContactDetailsTheResumeDoesntHave() throws Exception {
         SourceCheck withContact = new SourceCheck("""
                 Jane Doe. jane@example.com | github.com/janedoe. Experience. Software Engineer at Oracle Corporation.""");
